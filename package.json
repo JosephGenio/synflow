@@ -1,0 +1,19 @@
+{
+	"name": "synflow",
+	"private": true,
+	"version": "0.0.0",
+	"workspaces": [
+		"packages/*"
+	],
+	"scripts": {
+		"bootstrap": "pnpm install",
+		"dev:app": "pnpm --filter @synflow/app dev",
+		"dev:server": "pnpm --filter @synflow/server dev",
+		"dev": "concurrently \"pnpm --filter @synflow/server dev\" \"pnpm --filter @synflow/app dev\"",
+		"build": "pnpm -w -r build",
+		"start:server": "pnpm --filter @synflow/server start"
+	},
+	"devDependencies": {
+		"concurrently": "^8.2.0"
+	}
+}
