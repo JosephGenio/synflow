@@ -1,25 +1,42 @@
-import React, { useState } from 'react'
+import { useForm } from 'react-hook-form'
 import { useTheme } from './ThemeContext'
+import { isValidEmail } from './utils/validation'
 
 interface RegistrationScreenProps {
   onRegister: () => void
   onBackToLogin: () => void
 }
 
-export default function RegistrationScreen({ onRegister, onBackToLogin }: RegistrationScreenProps) {
-  const [firstName, setFirstName] = useState('')
-  const [middleName, setMiddleName] = useState('')
-  const [lastName, setLastName] = useState('')
-  const [email, setEmail] = useState('')
-  const [contactNumber, setContactNumber] = useState('')
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const { isDark, toggleTheme } = useTheme()
+interface RegistrationFormData {
+  firstName: string
+  middleName: string
+  lastName: string
+  email: string
+  contactNumber: string
+  username: string
+  password: string
+  confirmPassword: string
+}
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>): void => {
-    e.preventDefault()
+const inputClass = 'w-full px-3.5 py-2.5 rounded-lg border text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors'
+const inputDefault = `${inputClass} border-gray-300 dark:border-gray-600`
+const inputError = `${inputClass} border-red-500 dark:border-red-500`
+
+export default function RegistrationScreen({ onRegister, onBackToLogin }: RegistrationScreenProps) {
+  const { isDark, toggleTheme } = useTheme()
+  const {
+    register,
+    handleSubmit,
+    watch,
+    getValues,
+    formState: { errors },
+  } = useForm<RegistrationFormData>({
+    defaultValues: { contactNumber: '+63' },
+  })
+
+  const onSubmit = (): void => {
     onRegister()
+    console.log(getValues())
   }
 
   return (
@@ -76,7 +93,7 @@ export default function RegistrationScreen({ onRegister, onBackToLogin }: Regist
 
           {/* Card */}
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-8 transition-colors duration-200">
-            <form onSubmit={handleSubmit} className="space-y-6 lg:space-y-5">
+            <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-6 lg:space-y-5">
               {/* Personal Information */}
               <div>
                 <h2 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">Personal Information</h2>
@@ -90,12 +107,11 @@ export default function RegistrationScreen({ onRegister, onBackToLogin }: Regist
                       id="firstName"
                       type="text"
                       autoComplete="given-name"
-                      required
-                      value={firstName}
-                      onChange={(e) => setFirstName(e.target.value)}
                       placeholder="First name"
-                      className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
+                      className={errors.firstName ? inputError : inputDefault}
+                      {...register('firstName', { required: 'First name is required' })}
                     />
+                    {errors.firstName && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.firstName.message}</p>}
                   </div>
 
                   {/* Middle Name */}
@@ -107,11 +123,11 @@ export default function RegistrationScreen({ onRegister, onBackToLogin }: Regist
                       id="middleName"
                       type="text"
                       autoComplete="additional-name"
-                      value={middleName}
-                      onChange={(e) => setMiddleName(e.target.value)}
                       placeholder="Middle name"
-                      className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
+                      className={errors.middleName ? inputError : inputDefault}
+                      {...register('middleName', { required: 'Middle name is required' })}
                     />
+                    {errors.middleName && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.middleName.message}</p>}
                   </div>
 
                   {/* Last Name */}
@@ -123,12 +139,11 @@ export default function RegistrationScreen({ onRegister, onBackToLogin }: Regist
                       id="lastName"
                       type="text"
                       autoComplete="family-name"
-                      required
-                      value={lastName}
-                      onChange={(e) => setLastName(e.target.value)}
                       placeholder="Enter your last name"
-                      className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
+                      className={errors.lastName ? inputError : inputDefault}
+                      {...register('lastName', { required: 'Last name is required' })}
                     />
+                    {errors.lastName && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.lastName.message}</p>}
                   </div>
 
                   {/* Email */}
@@ -140,12 +155,14 @@ export default function RegistrationScreen({ onRegister, onBackToLogin }: Regist
                       id="email"
                       type="email"
                       autoComplete="email"
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
                       placeholder="Enter your email"
-                      className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
+                      className={errors.email ? inputError : inputDefault}
+                      {...register('email', {
+                        required: 'Email is required',
+                        validate: (value) => isValidEmail(value) || 'Please enter a valid email address',
+                      })}
                     />
+                    {errors.email && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.email.message}</p>}
                   </div>
 
                   {/* Contact Number */}
@@ -157,12 +174,16 @@ export default function RegistrationScreen({ onRegister, onBackToLogin }: Regist
                       id="contactNumber"
                       type="tel"
                       autoComplete="tel"
-                      required
-                      value={contactNumber}
-                      onChange={(e) => setContactNumber(e.target.value)}
-                      placeholder="Enter your contact number"
-                      className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
+                      placeholder="+63"
+                      className={errors.contactNumber ? inputError : inputDefault}
+                      {...register('contactNumber', {
+                        validate: (value) => {
+                          if (!value || value === '+63') return true
+                          return /^\+63\d{10}$/.test(value) || 'Contact number must start with +63 followed by 10 digits'
+                        },
+                      })}
                     />
+                    {errors.contactNumber && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.contactNumber.message}</p>}
                   </div>
                 </div>
               </div>
@@ -183,12 +204,11 @@ export default function RegistrationScreen({ onRegister, onBackToLogin }: Regist
                       id="regUsername"
                       type="text"
                       autoComplete="username"
-                      required
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
                       placeholder="Choose a username"
-                      className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
+                      className={errors.username ? inputError : inputDefault}
+                      {...register('username', { required: 'Username is required' })}
                     />
+                    {errors.username && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.username.message}</p>}
                   </div>
 
                   {/* Password */}
@@ -200,12 +220,11 @@ export default function RegistrationScreen({ onRegister, onBackToLogin }: Regist
                       id="regPassword"
                       type="password"
                       autoComplete="new-password"
-                      required
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
                       placeholder="Create a password"
-                      className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
+                      className={errors.password ? inputError : inputDefault}
+                      {...register('password', { required: 'Password is required' })}
                     />
+                    {errors.password && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.password.message}</p>}
                   </div>
 
                   {/* Confirm Password */}
@@ -217,12 +236,14 @@ export default function RegistrationScreen({ onRegister, onBackToLogin }: Regist
                       id="confirmPassword"
                       type="password"
                       autoComplete="new-password"
-                      required
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder="Confirm your password"
-                      className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
+                      className={errors.confirmPassword ? inputError : inputDefault}
+                      {...register('confirmPassword', {
+                        required: 'Please confirm your password',
+                        validate: (value) => value === watch('password') || 'Passwords do not match',
+                      })}
                     />
+                    {errors.confirmPassword && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.confirmPassword.message}</p>}
                   </div>
                 </div>
               </div>
