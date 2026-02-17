@@ -11,9 +11,20 @@
 		"dev:server": "pnpm --filter @synflow/server dev",
 		"dev": "concurrently \"pnpm --filter @synflow/server dev\" \"pnpm --filter @synflow/app dev\"",
 		"build": "pnpm -w -r build",
-		"start:server": "pnpm --filter @synflow/server start"
+		"start:server": "pnpm --filter @synflow/server start",
+		"test": "pnpm -r test"
 	},
 	"devDependencies": {
-		"concurrently": "^8.2.0"
+		"@eslint/js": "^9.0.0",
+		"@types/jest": "^29.0.0",
+		"concurrently": "^8.2.0",
+		"eslint": "^10.0.0",
+		"globals": "^15.0.0",
+		"jest": "^29.0.0",
+		"ts-jest": "^29.0.0",
+		"typescript-eslint": "^8.0.0"
+	},
+	"dependencies": {
+		"act": "^0.0.6"
 	}
 }

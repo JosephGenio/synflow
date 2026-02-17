@@ -1,5 +1,8 @@
 packages:
-  - "packages/*"
+  - packages/*
+
+ignoredBuiltDependencies:
+  - esbuild
 
 public-hoist-pattern:
-  - "*"
+  - '*'
