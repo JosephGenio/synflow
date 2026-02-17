@@ -14,6 +14,9 @@
 		"start:server": "pnpm --filter @synflow/server start",
 		"test": "pnpm -r test",
 		"health-check": "pnpm test && pnpm eslint . --max-warnings=0",
+		"db:up": "docker compose up -d",
+		"db:down": "docker compose down",
+		"db:reset": "docker compose down -v && docker compose up -d",
 		"prepare": "git config core.hooksPath .githooks"
 	},
 	"devDependencies": {
