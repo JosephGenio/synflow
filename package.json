@@ -12,7 +12,9 @@
 		"dev": "concurrently \"pnpm --filter @synflow/server dev\" \"pnpm --filter @synflow/app dev\"",
 		"build": "pnpm -w -r build",
 		"start:server": "pnpm --filter @synflow/server start",
-		"test": "pnpm -r test"
+		"test": "pnpm -r test",
+		"health-check": "pnpm test && pnpm eslint . --max-warnings=0",
+		"prepare": "git config core.hooksPath .githooks"
 	},
 	"devDependencies": {
 		"@eslint/js": "^9.0.0",
