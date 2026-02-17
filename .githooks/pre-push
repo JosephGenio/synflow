@@ -1,0 +1,3 @@
+#!/bin/sh
+echo "synflow: running health-check before push..."
+pnpm health-check

@@ -12,7 +12,7 @@ module.exports = {
       },
     ],
   },
-  setupFilesAfterEnv: ['@testing-library/jest-dom'],
+  setupFilesAfterEnv: ['@testing-library/jest-dom', '<rootDir>/jest.setup.ts'],
   testMatch: ['**/__tests__/**/*.test.{ts,tsx}', '**/*.test.{ts,tsx}'],
   moduleNameMapper: {
     '^@synflow/(.*)$': '<rootDir>/../../packages/$1/src',

@@ -1,12 +1,21 @@
-import React from 'react'
+import { useState } from 'react'
+import ThemeProvider from './ThemeContext'
+import LoginScreen from './LoginScreen'
+import DashboardScreen from './DashboardScreen'
+
+type View = 'login' | 'dashboard'
+
+function AppRoutes() {
+  const [view, setView] = useState<View>('login')
+
+  if (view === 'dashboard') return <DashboardScreen />
+  return <LoginScreen onLogin={() => setView('dashboard')} />
+}
 
 export default function App() {
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold text-gray-900 mb-2">synflow</h1>
-        <p className="text-gray-500">React + TypeScript + Tailwind CSS</p>
-      </div>
-    </div>
+    <ThemeProvider>
+      <AppRoutes />
+    </ThemeProvider>
   )
 }
