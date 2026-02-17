@@ -3,9 +3,10 @@ import { useTheme } from './ThemeContext'
 
 interface LoginScreenProps {
   onLogin: () => void
+  onSignUp: () => void
 }
 
-export default function LoginScreen({ onLogin }: LoginScreenProps) {
+export default function LoginScreen({ onLogin, onSignUp }: LoginScreenProps) {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const { isDark, toggleTheme } = useTheme()
@@ -123,6 +124,18 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                 Sign in
               </button>
             </form>
+
+            {/* Sign up link */}
+            <p className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
+              Don&apos;t have an account?{' '}
+              <button
+                type="button"
+                onClick={onSignUp}
+                className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300 font-medium transition-colors"
+              >
+                Sign up
+              </button>
+            </p>
           </div>
         </div>
       </main>
