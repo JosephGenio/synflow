@@ -1,5 +1,6 @@
 {
   "name": "@synflow/app",
+  "type": "module",
   "version": "0.0.0",
   "private": true,
   "scripts": {
@@ -9,8 +10,10 @@
     "test": "jest"
   },
   "dependencies": {
+    "@tailwindcss/vite": "^4.1.18",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "tailwindcss": "^4.1.18"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.0.0",

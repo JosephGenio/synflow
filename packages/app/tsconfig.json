@@ -3,7 +3,8 @@
   "compilerOptions": {
     "composite": true,
     "jsx": "react-jsx",
-    "outDir": "dist"
+    "outDir": "dist",
+    "moduleResolution": "Bundler"
   },
-  "include": ["src"]
+  "include": ["src", "vite.config.ts"]
 }
