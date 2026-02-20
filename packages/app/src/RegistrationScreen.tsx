@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTheme } from './ThemeContext'
 import { isValidEmail } from './utils/validation'
@@ -21,18 +22,34 @@ const inputError = `${inputClass} border-red-500 dark:border-red-500`
 
 export default function RegistrationScreen({ onRegister, onBackToLogin }: RegistrationScreenProps) {
   const { isDark, toggleTheme } = useTheme()
+  const [apiError, setApiError] = useState<string | null>(null)
   const {
     register,
     handleSubmit,
-    getValues,
-    formState: { errors },
+    formState: { errors, isSubmitting },
   } = useForm<RegistrationFormData>({
     defaultValues: { contactNumber: '+63' },
   })
 
-  const onSubmit = (): void => {
-    onRegister()
-    console.log(getValues())
+  const onSubmit = async (data: RegistrationFormData): Promise<void> => {
+    setApiError(null)
+    try {
+      const res = await fetch('/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
+      const json = await res.json()
+
+      if (!res.ok) {
+        setApiError(json.error ?? json.errors?.join(', ') ?? 'Registration failed')
+        return
+      }
+
+      onRegister()
+    } catch {
+      setApiError('Unable to connect to the server. Please try again.')
+    }
   }
 
   return (
@@ -173,8 +190,9 @@ export default function RegistrationScreen({ onRegister, onBackToLogin }: Regist
                       placeholder="+63"
                       className={errors.contactNumber ? inputError : inputDefault}
                       {...register('contactNumber', {
+                        required: 'Contact number is required',
                         validate: (value) => {
-                          if (!value || value === '+63') return true
+                          if (value === '+63') return 'Contact number is required'
                           return /^\+63\d{10}$/.test(value) || 'Contact number must start with +63 followed by 10 digits'
                         },
                       })}
@@ -184,12 +202,20 @@ export default function RegistrationScreen({ onRegister, onBackToLogin }: Regist
                 </div>
               </div>
 
+              {/* API Error */}
+              {apiError && (
+                <div className="rounded-lg bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 p-3 text-sm text-red-700 dark:text-red-400">
+                  {apiError}
+                </div>
+              )}
+
               {/* Submit */}
               <button
                 type="submit"
-                className="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800 mt-2"
+                disabled={isSubmitting}
+                className="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800 mt-2"
               >
-                Create Account
+                {isSubmitting ? 'Creating Account...' : 'Create Account'}
               </button>
             </form>
 
