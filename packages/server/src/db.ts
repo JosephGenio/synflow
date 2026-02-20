@@ -35,6 +35,17 @@ export async function getPool(): Promise<sql.ConnectionPool> {
 
   // Now connect to the target database
   pool = await new sql.ConnectionPool(config).connect()
+
+  // Ensure verification columns exist on UserRegistration
+  await pool.request().query(`
+    IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('UserRegistration') AND name = 'VerificationToken')
+      ALTER TABLE [UserRegistration] ADD VerificationToken UNIQUEIDENTIFIER DEFAULT NEWID()
+  `)
+  await pool.request().query(`
+    IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('UserRegistration') AND name = 'IsVerified')
+      ALTER TABLE [UserRegistration] ADD IsVerified BIT DEFAULT 0
+  `)
+
   return pool
 }
 

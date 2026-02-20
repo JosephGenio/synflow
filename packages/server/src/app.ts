@@ -1,6 +1,7 @@
 import express, { Request, Response } from 'express'
 import cors from 'cors'
 import { getPool } from './db'
+import { sendVerificationEmail } from './email'
 
 const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$/
 const CONTACT_REGEX = /^\+63\d{10}$/
@@ -93,6 +94,19 @@ app.post('/api/register', async (req: Request, res: Response) => {
         VALUES (@firstName, @middleName, @lastName, @email, @contactNumber)
       `)
 
+    // Retrieve the auto-generated verification token
+    const tokenResult = await pool.request()
+      .input('email', body.email.trim())
+      .query('SELECT VerificationToken FROM [UserRegistration] WHERE Email = @email')
+    const token = tokenResult.recordset[0]?.VerificationToken as string | undefined
+
+    // Send verification email (non-blocking — don't fail registration if email fails)
+    if (token) {
+      sendVerificationEmail(body.email.trim(), body.firstName.trim(), token).catch((err) => {
+        console.error('Failed to send verification email:', err)
+      })
+    }
+
     res.status(201).json({ ok: true })
   } catch (err: unknown) {
     const sqlErr = err as { number?: number }
@@ -100,6 +114,37 @@ app.post('/api/register', async (req: Request, res: Response) => {
       res.status(409).json({ ok: false, error: 'Email already registered' })
       return
     }
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    res.status(500).json({ ok: false, error: message })
+  }
+})
+
+app.get('/api/verify-email', async (req: Request, res: Response) => {
+  const token = req.query.token as string | undefined
+
+  if (!token) {
+    res.status(400).json({ ok: false, error: 'Verification token is required' })
+    return
+  }
+
+  try {
+    const pool = await getPool()
+    const result = await pool.request()
+      .input('token', token)
+      .query(`
+        UPDATE [UserRegistration]
+        SET IsVerified = 1
+        WHERE VerificationToken = @token AND IsVerified = 0
+      `)
+
+    if (result.rowsAffected[0] === 0) {
+      res.status(400).json({ ok: false, error: 'Invalid or expired verification token' })
+      return
+    }
+
+    const appUrl = process.env.APP_URL ?? 'http://localhost:3000'
+    res.redirect(`${appUrl}/verified`)
+  } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     res.status(500).json({ ok: false, error: message })
   }
