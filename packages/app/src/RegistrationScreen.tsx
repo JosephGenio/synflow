@@ -13,9 +13,6 @@ interface RegistrationFormData {
   lastName: string
   email: string
   contactNumber: string
-  username: string
-  password: string
-  confirmPassword: string
 }
 
 const inputClass = 'w-full px-3.5 py-2.5 rounded-lg border text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors'
@@ -27,7 +24,6 @@ export default function RegistrationScreen({ onRegister, onBackToLogin }: Regist
   const {
     register,
     handleSubmit,
-    watch,
     getValues,
     formState: { errors },
   } = useForm<RegistrationFormData>({
@@ -184,66 +180,6 @@ export default function RegistrationScreen({ onRegister, onBackToLogin }: Regist
                       })}
                     />
                     {errors.contactNumber && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.contactNumber.message}</p>}
-                  </div>
-                </div>
-              </div>
-
-              {/* Separator */}
-              <hr className="border-gray-200 dark:border-gray-700" />
-
-              {/* Account Details */}
-              <div>
-                <h2 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">Account Details</h2>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 lg:gap-4">
-                  {/* Username */}
-                  <div className="lg:col-span-2">
-                    <label htmlFor="regUsername" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                      Username
-                    </label>
-                    <input
-                      id="regUsername"
-                      type="text"
-                      autoComplete="username"
-                      placeholder="Choose a username"
-                      className={errors.username ? inputError : inputDefault}
-                      {...register('username', { required: 'Username is required' })}
-                    />
-                    {errors.username && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.username.message}</p>}
-                  </div>
-
-                  {/* Password */}
-                  <div>
-                    <label htmlFor="regPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                      Password
-                    </label>
-                    <input
-                      id="regPassword"
-                      type="password"
-                      autoComplete="new-password"
-                      placeholder="Create a password"
-                      className={errors.password ? inputError : inputDefault}
-                      {...register('password', { required: 'Password is required' })}
-                    />
-                    {errors.password && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.password.message}</p>}
-                  </div>
-
-                  {/* Confirm Password */}
-                  <div>
-                    <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                      Confirm Password
-                    </label>
-                    <input
-                      id="confirmPassword"
-                      type="password"
-                      autoComplete="new-password"
-                      placeholder="Confirm your password"
-                      className={errors.confirmPassword ? inputError : inputDefault}
-                      {...register('confirmPassword', {
-                        required: 'Please confirm your password',
-                        validate: (value) => value === watch('password') || 'Passwords do not match',
-                      })}
-                    />
-                    {errors.confirmPassword && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.confirmPassword.message}</p>}
                   </div>
                 </div>
               </div>
