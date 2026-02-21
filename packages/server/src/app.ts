@@ -1,7 +1,8 @@
 import express, { Request, Response } from 'express'
 import cors from 'cors'
+import bcrypt from 'bcrypt'
 import { getPool } from './db'
-import { sendVerificationEmail } from './email'
+import { sendVerificationEmail, sendAccountCreatedEmail } from './email'
 
 const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$/
 const CONTACT_REGEX = /^\+63\d{10}$/
@@ -90,8 +91,8 @@ app.post('/api/register', async (req: Request, res: Response) => {
       .input('email', body.email.trim())
       .input('contactNumber', body.contactNumber.trim())
       .query(`
-        INSERT INTO [UserRegistration] (FirstName, MiddleName, LastName, Email, ContactNumber)
-        VALUES (@firstName, @middleName, @lastName, @email, @contactNumber)
+        INSERT INTO [UserRegistration] (FirstName, MiddleName, LastName, Email, ContactNumber, TokenExpiresAt)
+        VALUES (@firstName, @middleName, @lastName, @email, @contactNumber, DATEADD(HOUR, 1, GETDATE()))
       `)
 
     // Retrieve the auto-generated verification token
@@ -134,16 +135,158 @@ app.get('/api/verify-email', async (req: Request, res: Response) => {
       .query(`
         UPDATE [UserRegistration]
         SET IsVerified = 1
-        WHERE VerificationToken = @token AND IsVerified = 0
+        WHERE VerificationToken = @token AND IsVerified = 0 AND TokenExpiresAt > GETDATE()
       `)
 
     if (result.rowsAffected[0] === 0) {
-      res.status(400).json({ ok: false, error: 'Invalid or expired verification token' })
+      // Check why it failed
+      const existing = await pool.request()
+        .input('token2', token)
+        .query('SELECT IsVerified, PasswordHash, TokenExpiresAt FROM [UserRegistration] WHERE VerificationToken = @token2')
+      const row = existing.recordset[0]
+
+      if (!row) {
+        // Token doesn't exist — may have already been moved to User table
+        const userExists = await pool.request()
+          .input('token3', token)
+          .query('SELECT 1 as found FROM [User] u JOIN [UserSecurity] us ON u.KeyUser = us.KeyUser WHERE us.Username IS NOT NULL AND EXISTS (SELECT 1)')
+        if (userExists.recordset.length > 0) {
+          const appUrl = process.env.APP_URL ?? 'http://localhost:3000'
+          res.redirect(`${appUrl}/?status=already-verified`)
+          return
+        }
+        res.status(400).json({ ok: false, error: 'Invalid verification token' })
+        return
+      }
+
+      if (row.TokenExpiresAt && new Date(row.TokenExpiresAt) <= new Date()) {
+        res.status(400).json({ ok: false, error: 'Verification link has expired. Please register again.' })
+        return
+      }
+
+      if (row.IsVerified && row.PasswordHash) {
+        const appUrl = process.env.APP_URL ?? 'http://localhost:3000'
+        res.redirect(`${appUrl}/?status=already-verified`)
+        return
+      }
+
+      if (row.IsVerified) {
+        // Already verified but no password yet — redirect to set password
+        const appUrl = process.env.APP_URL ?? 'http://localhost:3000'
+        res.redirect(`${appUrl}/?view=set-password&token=${token}`)
+        return
+      }
+
+      res.status(400).json({ ok: false, error: 'Invalid verification token' })
       return
     }
 
     const appUrl = process.env.APP_URL ?? 'http://localhost:3000'
-    res.redirect(`${appUrl}/verified`)
+    res.redirect(`${appUrl}/?view=set-password&token=${token}`)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    res.status(500).json({ ok: false, error: message })
+  }
+})
+
+app.post('/api/set-password', async (req: Request, res: Response) => {
+  const { token, password } = req.body as { token?: string; password?: string }
+
+  if (!token || !password) {
+    res.status(400).json({ ok: false, error: 'Token and password are required' })
+    return
+  }
+
+  // Password strength validation
+  const passwordErrors: string[] = []
+  if (password.length < 8) {
+    passwordErrors.push('Password must be at least 8 characters')
+  }
+  if (!/[A-Z]/.test(password)) {
+    passwordErrors.push('Password must contain at least one uppercase letter')
+  }
+  if (!/[a-z]/.test(password)) {
+    passwordErrors.push('Password must contain at least one lowercase letter')
+  }
+  if (!/\d/.test(password)) {
+    passwordErrors.push('Password must contain at least one number')
+  }
+  if (!/[^A-Za-z0-9]/.test(password)) {
+    passwordErrors.push('Password must contain at least one special character')
+  }
+
+  if (passwordErrors.length > 0) {
+    res.status(400).json({ ok: false, errors: passwordErrors })
+    return
+  }
+
+  try {
+    const pool = await getPool()
+
+    // Verify the token exists and user is verified but has no password yet
+    const regResult = await pool.request()
+      .input('token', token)
+      .query(`
+        SELECT FirstName, MiddleName, LastName, Email, ContactNumber
+        FROM [UserRegistration]
+        WHERE VerificationToken = @token AND IsVerified = 1 AND PasswordHash IS NULL
+      `)
+
+    if (regResult.recordset.length === 0) {
+      res.status(400).json({ ok: false, error: 'Invalid token or password already set' })
+      return
+    }
+
+    const reg = regResult.recordset[0]
+    const hash = await bcrypt.hash(password, 12)
+
+    // Move to User + UserSecurity in a transaction
+    const transaction = pool.transaction()
+    await transaction.begin()
+
+    try {
+      // Insert into User and get the new KeyUser
+      const userInsert = await transaction.request()
+        .input('first', reg.FirstName)
+        .input('middle', reg.MiddleName)
+        .input('last', reg.LastName)
+        .input('email', reg.Email)
+        .input('contactNumber', reg.ContactNumber)
+        .query(`
+          INSERT INTO [User] ([First], [Middle], [Last], Email, ContactNumber)
+          OUTPUT INSERTED.KeyUser
+          VALUES (@first, @middle, @last, @email, @contactNumber)
+        `)
+
+      const keyUser = userInsert.recordset[0].KeyUser as string
+
+      // Insert into UserSecurity
+      await transaction.request()
+        .input('keyUser', keyUser)
+        .input('username', reg.Email)
+        .input('password', hash)
+        .query(`
+          INSERT INTO [UserSecurity] (KeyUser, UserName, Password, DtCreated, LastLogin)
+          VALUES (@keyUser, @username, @password, SYSDATETIMEOFFSET(), SYSDATETIMEOFFSET())
+        `)
+
+      // Delete the staging registration record
+      await transaction.request()
+        .input('token', token)
+        .query('DELETE FROM [UserRegistration] WHERE VerificationToken = @token')
+
+      await transaction.commit()
+
+      // Send confirmation email (non-blocking)
+      sendAccountCreatedEmail(reg.Email, reg.FirstName).catch((err) => {
+        console.error('Failed to send account created email:', err)
+      })
+
+      res.json({ ok: true })
+    } catch (txErr) {
+      await transaction.rollback()
+      throw txErr
+    }
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     res.status(500).json({ ok: false, error: message })

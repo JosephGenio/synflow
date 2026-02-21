@@ -45,6 +45,38 @@ export async function getPool(): Promise<sql.ConnectionPool> {
     IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('UserRegistration') AND name = 'IsVerified')
       ALTER TABLE [UserRegistration] ADD IsVerified BIT DEFAULT 0
   `)
+  await pool.request().query(`
+    IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('UserRegistration') AND name = 'PasswordHash')
+      ALTER TABLE [UserRegistration] ADD PasswordHash NVARCHAR(255) NULL
+  `)
+  await pool.request().query(`
+    IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('UserRegistration') AND name = 'TokenExpiresAt')
+      ALTER TABLE [UserRegistration] ADD TokenExpiresAt DATETIME2 NULL
+  `)
+
+  // Ensure permanent User and UserSecurity tables exist
+  await pool.request().query(`
+    IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'User')
+    CREATE TABLE [User] (
+      KeyUser UNIQUEIDENTIFIER DEFAULT NEWID() PRIMARY KEY,
+      [First] VARCHAR(50) NOT NULL,
+      [Middle] VARCHAR(50) NOT NULL,
+      [Last] VARCHAR(50) NOT NULL,
+      Email VARCHAR(100) NOT NULL UNIQUE,
+      ContactNumber NVARCHAR(13) NULL
+    )
+  `)
+  await pool.request().query(`
+    IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'UserSecurity')
+    CREATE TABLE [UserSecurity] (
+      KeyUserSecurity UNIQUEIDENTIFIER DEFAULT NEWID() PRIMARY KEY,
+      KeyUser UNIQUEIDENTIFIER NOT NULL REFERENCES [User](KeyUser),
+      UserName VARCHAR(50) NOT NULL,
+      Password TEXT NOT NULL,
+      DtCreated DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
+      LastLogin DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET()
+    )
+  `)
 
   return pool
 }

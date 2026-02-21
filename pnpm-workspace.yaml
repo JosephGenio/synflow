@@ -4,5 +4,8 @@ packages:
 ignoredBuiltDependencies:
   - esbuild
 
+onlyBuiltDependencies:
+  - bcrypt
+
 public-hoist-pattern:
   - '*'
