@@ -1,10 +1,16 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { useTheme } from './ThemeContext'
+import type { UserInfo } from './LoginScreen'
 import MessagesPanel from './MessagesPanel'
 import NotificationsPanel from './NotificationsPanel'
 import ProfilePanel from './ProfilePanel'
 
 type OpenPanel = 'messages' | 'notifications' | 'profile' | null
+
+interface DashboardScreenProps {
+  user: UserInfo
+  onLogout: () => void
+}
 
 interface NavItem {
   label: string
@@ -71,7 +77,7 @@ const settingsNav: NavItem[] = [
   { label: 'Settings', icon: <IconSettings /> },
 ]
 
-export default function DashboardScreen() {
+export default function DashboardScreen({ user, onLogout }: DashboardScreenProps) {
   const { isDark, toggleTheme } = useTheme()
   const [activeItem, setActiveItem] = useState('Dashboard')
   const [openPanel, setOpenPanel] = useState<OpenPanel>(null)
@@ -240,9 +246,9 @@ export default function DashboardScreen() {
                 onClick={() => togglePanel('profile')}
                 className="w-9 h-9 flex items-center justify-center rounded-full bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 transition-colors"
               >
-                JD
+                {user.firstName[0]}{user.lastName[0]}
               </button>
-              {openPanel === 'profile' && <ProfilePanel />}
+              {openPanel === 'profile' && <ProfilePanel user={user} onLogout={onLogout} />}
             </div>
           </div>
         </header>
@@ -252,7 +258,7 @@ export default function DashboardScreen() {
           <main className="flex-1 p-6">
             {/* Greeting */}
             <div className="mb-6">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Good morning, J.</h2>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Good morning, {user.firstName}.</h2>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Here's what's happening in your workspace today.</p>
             </div>
 

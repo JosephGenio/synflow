@@ -43,6 +43,41 @@ export async function sendVerificationEmail(
   })
 }
 
+export async function sendPasswordResetEmail(
+  to: string,
+  firstName: string,
+  token: string,
+): Promise<void> {
+  const resetUrl = `${appUrl}/?view=reset-password&token=${token}`
+
+  await brevo.transactionalEmails.sendTransacEmail({
+    sender: { name: senderName, email: senderEmail },
+    to: [{ email: to, name: firstName }],
+    subject: 'Reset your Synflow password',
+    htmlContent: `
+      <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px;">
+        <h2 style="color: #4f46e5;">Reset your password</h2>
+        <p>Hi ${firstName}, we received a request to reset your Synflow password. Click the button below to choose a new password:</p>
+        <a href="${resetUrl}"
+           style="display: inline-block; padding: 12px 24px; background-color: #4f46e5; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 16px 0;">
+          Reset Password
+        </a>
+        <p style="color: #6b7280; font-size: 14px; margin-top: 24px;">
+          If the button doesn't work, copy and paste this link into your browser:<br/>
+          <a href="${resetUrl}" style="color: #4f46e5;">${resetUrl}</a>
+        </p>
+        <p style="color: #ef4444; font-size: 13px; margin-top: 16px;">
+          This link expires in 1 hour.
+        </p>
+        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
+        <p style="color: #9ca3af; font-size: 12px;">
+          If you didn't request a password reset, you can safely ignore this email. Your password will remain unchanged.
+        </p>
+      </div>
+    `,
+  })
+}
+
 export async function sendAccountCreatedEmail(
   to: string,
   firstName: string,

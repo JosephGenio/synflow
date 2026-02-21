@@ -1,8 +1,10 @@
-import express, { Request, Response } from 'express'
+import express, { Request, Response, NextFunction } from 'express'
 import cors from 'cors'
+import cookieParser from 'cookie-parser'
 import bcrypt from 'bcrypt'
+import jwt from 'jsonwebtoken'
 import { getPool } from './db'
-import { sendVerificationEmail, sendAccountCreatedEmail } from './email'
+import { sendVerificationEmail, sendAccountCreatedEmail, sendPasswordResetEmail } from './email'
 
 const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$/
 const CONTACT_REGEX = /^\+63\d{10}$/
@@ -54,9 +56,50 @@ function validateRegistration(body: RegisterBody): string[] {
   return errors
 }
 
+interface JwtPayload {
+  keyUser: string
+  email: string
+  firstName: string
+  lastName: string
+}
+
+interface LoginBody {
+  username: string
+  password: string
+}
+
+function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET
+  if (!secret) {
+    throw new Error('JWT_SECRET environment variable is not set')
+  }
+  return secret
+}
+
+function authenticateToken(req: Request, res: Response, next: NextFunction): void {
+  const token = (req.cookies as Record<string, string>)?.token
+
+  if (!token) {
+    res.status(401).json({ ok: false, error: 'Authentication required' })
+    return
+  }
+
+  try {
+    const decoded = jwt.verify(token, getJwtSecret()) as JwtPayload
+    ;(req as Request & { user: JwtPayload }).user = decoded
+    next()
+  } catch {
+    res.status(401).json({ ok: false, error: 'Invalid or expired token' })
+  }
+}
+
 const app = express()
-app.use(cors())
+app.use(cors({
+  origin: process.env.APP_URL ?? 'http://localhost:3000',
+  credentials: true,
+}))
 app.use(express.json())
+app.use(cookieParser())
 
 app.get('/api/ping', (_req, res) => {
   res.json({ ok: true, time: new Date().toISOString() })
@@ -291,6 +334,216 @@ app.post('/api/set-password', async (req: Request, res: Response) => {
     const message = err instanceof Error ? err.message : 'Unknown error'
     res.status(500).json({ ok: false, error: message })
   }
+})
+
+app.post('/api/forgot-password', async (req: Request, res: Response) => {
+  const { email } = req.body as { email?: string }
+
+  if (!email || !email.trim()) {
+    res.status(400).json({ ok: false, error: 'Email is required' })
+    return
+  }
+
+  if (!EMAIL_REGEX.test(email.trim())) {
+    res.status(400).json({ ok: false, error: 'Please enter a valid email address' })
+    return
+  }
+
+  try {
+    const pool = await getPool()
+
+    // Look up user by email
+    const userResult = await pool.request()
+      .input('email', email.trim())
+      .query('SELECT TOP 1 u.KeyUser, u.[First] FROM [User] u WHERE u.Email = @email')
+
+    if (userResult.recordset.length > 0) {
+      const user = userResult.recordset[0]
+      const keyUser = user.KeyUser as string
+      const firstName = user.First as string
+
+      // Create password reset record
+      const insertResult = await pool.request()
+        .input('keyUser', keyUser)
+        .query(`
+          INSERT INTO [PasswordReset] (KeyUser, TokenExpiresAt)
+          OUTPUT INSERTED.ResetToken
+          VALUES (@keyUser, DATEADD(HOUR, 1, GETDATE()))
+        `)
+
+      const resetToken = insertResult.recordset[0].ResetToken as string
+
+      // Send reset email (non-blocking)
+      sendPasswordResetEmail(email.trim(), firstName, resetToken).catch((err) => {
+        console.error('Failed to send password reset email:', err)
+      })
+    }
+
+    // Always return success to prevent email enumeration
+    res.json({ ok: true, message: 'If an account exists with that email, a password reset link has been sent.' })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    res.status(500).json({ ok: false, error: message })
+  }
+})
+
+app.post('/api/reset-password', async (req: Request, res: Response) => {
+  const { token, password } = req.body as { token?: string; password?: string }
+
+  if (!token || !password) {
+    res.status(400).json({ ok: false, error: 'Token and password are required' })
+    return
+  }
+
+  // Password strength validation (same rules as set-password)
+  const passwordErrors: string[] = []
+  if (password.length < 8) {
+    passwordErrors.push('Password must be at least 8 characters')
+  }
+  if (!/[A-Z]/.test(password)) {
+    passwordErrors.push('Password must contain at least one uppercase letter')
+  }
+  if (!/[a-z]/.test(password)) {
+    passwordErrors.push('Password must contain at least one lowercase letter')
+  }
+  if (!/\d/.test(password)) {
+    passwordErrors.push('Password must contain at least one number')
+  }
+  if (!/[^A-Za-z0-9]/.test(password)) {
+    passwordErrors.push('Password must contain at least one special character')
+  }
+
+  if (passwordErrors.length > 0) {
+    res.status(400).json({ ok: false, errors: passwordErrors })
+    return
+  }
+
+  try {
+    const pool = await getPool()
+
+    // Verify the reset token is valid and not expired
+    const resetResult = await pool.request()
+      .input('token', token)
+      .query(`
+        SELECT pr.KeyUser
+        FROM [PasswordReset] pr
+        WHERE pr.ResetToken = @token AND pr.IsUsed = 0 AND pr.TokenExpiresAt > GETDATE()
+      `)
+
+    if (resetResult.recordset.length === 0) {
+      res.status(400).json({ ok: false, error: 'Invalid or expired reset link. Please request a new one.' })
+      return
+    }
+
+    const keyUser = resetResult.recordset[0].KeyUser as string
+    const hash = await bcrypt.hash(password, 12)
+
+    // Update password and mark token as used
+    await pool.request()
+      .input('keyUser', keyUser)
+      .input('hash', hash)
+      .query('UPDATE [UserSecurity] SET Password = @hash WHERE KeyUser = @keyUser')
+
+    await pool.request()
+      .input('token2', token)
+      .query('UPDATE [PasswordReset] SET IsUsed = 1 WHERE ResetToken = @token2')
+
+    res.json({ ok: true })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    res.status(500).json({ ok: false, error: message })
+  }
+})
+
+app.post('/api/login', async (req: Request, res: Response) => {
+  const { username, password } = req.body as LoginBody
+
+  if (!username || !username.trim()) {
+    res.status(400).json({ ok: false, error: 'Username is required' })
+    return
+  }
+  if (!password) {
+    res.status(400).json({ ok: false, error: 'Password is required' })
+    return
+  }
+
+  try {
+    const pool = await getPool()
+
+    const secResult = await pool.request()
+      .input('username', username.trim())
+      .query('SELECT TOP 1 KeyUser, Password FROM [UserSecurity] WHERE UserName = @username')
+
+    if (secResult.recordset.length === 0) {
+      res.status(401).json({ ok: false, error: 'Invalid username or password' })
+      return
+    }
+
+    const secRow = secResult.recordset[0]
+    const storedHash = secRow.Password as string
+    const keyUser = secRow.KeyUser as string
+
+    const isMatch = await bcrypt.compare(password, storedHash)
+    if (!isMatch) {
+      res.status(401).json({ ok: false, error: 'Invalid username or password' })
+      return
+    }
+
+    const userResult = await pool.request()
+      .input('keyUser', keyUser)
+      .query('SELECT TOP 1 [First], [Last], Email FROM [User] WHERE KeyUser = @keyUser')
+
+    if (userResult.recordset.length === 0) {
+      res.status(500).json({ ok: false, error: 'User record not found' })
+      return
+    }
+
+    const user = userResult.recordset[0]
+
+    await pool.request()
+      .input('keyUser2', keyUser)
+      .query('UPDATE [UserSecurity] SET LastLogin = SYSDATETIMEOFFSET() WHERE KeyUser = @keyUser2')
+
+    const payload: JwtPayload = {
+      keyUser,
+      email: user.Email as string,
+      firstName: user.First as string,
+      lastName: user.Last as string,
+    }
+
+    const token = jwt.sign(payload, getJwtSecret(), { expiresIn: '1h' })
+
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 60 * 60 * 1000,
+      path: '/',
+    })
+
+    res.json({
+      ok: true,
+      user: {
+        keyUser,
+        email: user.Email,
+        firstName: user.First,
+        lastName: user.Last,
+      },
+    })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    res.status(500).json({ ok: false, error: message })
+  }
+})
+
+app.get('/api/me', authenticateToken, (req: Request, res: Response) => {
+  const user = (req as Request & { user: JwtPayload }).user
+  res.json({ ok: true, user })
+})
+
+app.post('/api/logout', (_req: Request, res: Response) => {
+  res.clearCookie('token', { path: '/' })
+  res.json({ ok: true })
 })
 
 export default app

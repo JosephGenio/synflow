@@ -78,6 +78,18 @@ export async function getPool(): Promise<sql.ConnectionPool> {
     )
   `)
 
+  // Ensure PasswordReset table exists
+  await pool.request().query(`
+    IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'PasswordReset')
+    CREATE TABLE [PasswordReset] (
+      KeyPasswordReset UNIQUEIDENTIFIER DEFAULT NEWID() PRIMARY KEY,
+      KeyUser UNIQUEIDENTIFIER NOT NULL REFERENCES [User](KeyUser),
+      ResetToken UNIQUEIDENTIFIER DEFAULT NEWID(),
+      TokenExpiresAt DATETIME2 NOT NULL,
+      IsUsed BIT DEFAULT 0
+    )
+  `)
+
   return pool
 }
 
