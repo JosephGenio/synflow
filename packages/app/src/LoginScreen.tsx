@@ -1,18 +1,58 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
+import { useForm } from 'react-hook-form'
 import { useTheme } from './ThemeContext'
 
-interface LoginScreenProps {
-  onLogin: () => void
+export interface UserInfo {
+  keyUser: string
+  email: string
+  firstName: string
+  lastName: string
 }
 
-export default function LoginScreen({ onLogin }: LoginScreenProps) {
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
-  const { isDark, toggleTheme } = useTheme()
+interface LoginScreenProps {
+  onLogin: (user: UserInfo) => void
+  onSignUp: () => void
+  onForgotPassword: () => void
+}
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    onLogin()
+interface LoginFormData {
+  username: string
+  password: string
+}
+
+const inputClass = 'w-full px-3.5 py-2.5 rounded-lg border text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors'
+const inputDefault = `${inputClass} border-gray-300 dark:border-gray-600`
+const inputError = `${inputClass} border-red-500 dark:border-red-500`
+
+export default function LoginScreen({ onLogin, onSignUp, onForgotPassword }: LoginScreenProps) {
+  const { isDark, toggleTheme } = useTheme()
+  const [apiError, setApiError] = useState<string | null>(null)
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<LoginFormData>()
+
+  const onSubmit = async (data: LoginFormData): Promise<void> => {
+    setApiError(null)
+    try {
+      const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(data),
+      })
+      const json = await res.json()
+
+      if (!res.ok) {
+        setApiError(json.error ?? 'Login failed')
+        return
+      }
+
+      onLogin(json.user as UserInfo)
+    } catch {
+      setApiError('Unable to connect to the server. Please try again.')
+    }
   }
 
   return (
@@ -71,7 +111,14 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
 
           {/* Card */}
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-8 transition-colors duration-200">
-            <form onSubmit={handleSubmit} className="space-y-5">
+            {/* API error banner */}
+            {apiError && (
+              <div className="mb-4 p-3 rounded-lg bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-sm text-red-600 dark:text-red-400">
+                {apiError}
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
               {/* Username */}
               <div>
                 <label htmlFor="username" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
@@ -81,12 +128,13 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                   id="username"
                   type="text"
                   autoComplete="username"
-                  required
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
                   placeholder="Enter your username"
-                  className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
+                  className={errors.username ? inputError : inputDefault}
+                  {...register('username', { required: 'Username is required' })}
                 />
+                {errors.username && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.username.message}</p>
+                )}
               </div>
 
               {/* Password */}
@@ -97,7 +145,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                   </label>
                   <button
                     type="button"
-                    onClick={() => {/* TODO: implement forgot password */}}
+                    onClick={onForgotPassword}
                     className="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300 font-medium transition-colors"
                   >
                     Forgot password?
@@ -107,22 +155,36 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                   id="password"
                   type="password"
                   autoComplete="current-password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter your password"
-                  className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
+                  className={errors.password ? inputError : inputDefault}
+                  {...register('password', { required: 'Password is required' })}
                 />
+                {errors.password && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.password.message}</p>
+                )}
               </div>
 
               {/* Submit */}
               <button
                 type="submit"
-                className="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800 mt-2"
+                disabled={isSubmitting}
+                className="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800 mt-2"
               >
-                Sign in
+                {isSubmitting ? 'Signing in...' : 'Sign in'}
               </button>
             </form>
+
+            {/* Sign up link */}
+            <p className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
+              Don&apos;t have an account?{' '}
+              <button
+                type="button"
+                onClick={onSignUp}
+                className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300 font-medium transition-colors"
+              >
+                Sign up
+              </button>
+            </p>
           </div>
         </div>
       </main>
