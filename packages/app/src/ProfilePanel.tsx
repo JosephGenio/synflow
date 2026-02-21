@@ -1,4 +1,10 @@
 import React from 'react'
+import type { UserInfo } from './LoginScreen'
+
+interface ProfilePanelProps {
+  user: UserInfo
+  onLogout: () => void
+}
 
 interface MenuItem {
   label: string
@@ -36,17 +42,24 @@ const menuItems: MenuItem[] = [
   },
 ]
 
-export default function ProfilePanel(): React.ReactElement {
+export default function ProfilePanel({ user, onLogout }: ProfilePanelProps): React.ReactElement {
+  const initials = user.firstName[0] + user.lastName[0]
+  const fullName = `${user.firstName} ${user.lastName}`
+
+  const handleSignOut = async (): Promise<void> => {
+    await fetch('/api/logout', { method: 'POST', credentials: 'include' })
+    onLogout()
+  }
   return (
     <div className="absolute right-0 top-full mt-2 w-60 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 z-50 overflow-hidden">
       {/* User info */}
       <div className="px-4 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-3">
         <div className="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
-          JD
+          {initials}
         </div>
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">John Doe</p>
-          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">john.doe@synflow.io</p>
+          <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{fullName}</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user.email}</p>
         </div>
       </div>
 
@@ -69,6 +82,7 @@ export default function ProfilePanel(): React.ReactElement {
       <div className="border-t border-gray-100 dark:border-gray-700 py-1">
         <button
           type="button"
+          onClick={handleSignOut}
           className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
         >
           <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
