@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTheme } from './ThemeContext'
+import PasswordField from './components/PasswordField'
 
 export interface UserInfo {
   keyUser: string
@@ -138,31 +139,14 @@ export default function LoginScreen({ onLogin, onSignUp, onForgotPassword }: Log
               </div>
 
               {/* Password */}
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Password
-                  </label>
-                  <button
-                    type="button"
-                    onClick={onForgotPassword}
-                    className="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300 font-medium transition-colors"
-                  >
-                    Forgot password?
-                  </button>
-                </div>
-                <input
-                  id="password"
-                  type="password"
-                  autoComplete="current-password"
-                  placeholder="Enter your password"
-                  className={errors.password ? inputError : inputDefault}
-                  {...register('password', { required: 'Password is required' })}
-                />
-                {errors.password && (
-                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.password.message}</p>
-                )}
-              </div>
+              <PasswordField
+                label="Password"
+                placeholder="Enter your password"
+                register={register('password', { required: 'Password is required' })}
+                error={errors.password}
+                showForgotPassword
+                onForgotPassword={onForgotPassword}
+              />
 
               {/* Submit */}
               <button

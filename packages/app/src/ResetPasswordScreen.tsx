@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTheme } from './ThemeContext'
+import PasswordField from './components/PasswordField'
 
 interface ResetPasswordScreenProps {
   token: string
@@ -12,45 +13,9 @@ interface ResetPasswordFormData {
   confirmPassword: string
 }
 
-type StrengthLevel = 'weak' | 'fair' | 'good' | 'strong'
-
-function getPasswordStrength(password: string): { level: StrengthLevel; score: number } {
-  let score = 0
-  if (password.length >= 8) score++
-  if (/[A-Z]/.test(password)) score++
-  if (/[a-z]/.test(password)) score++
-  if (/\d/.test(password)) score++
-  if (/[^A-Za-z0-9]/.test(password)) score++
-
-  if (score <= 2) return { level: 'weak', score }
-  if (score === 3) return { level: 'fair', score }
-  if (score === 4) return { level: 'good', score }
-  return { level: 'strong', score }
-}
-
-const strengthColors: Record<StrengthLevel, string> = {
-  weak: 'bg-red-500',
-  fair: 'bg-yellow-500',
-  good: 'bg-blue-500',
-  strong: 'bg-green-500',
-}
-
-const strengthLabels: Record<StrengthLevel, string> = {
-  weak: 'Weak',
-  fair: 'Fair',
-  good: 'Good',
-  strong: 'Strong',
-}
-
-const inputClass = 'w-full px-3.5 py-2.5 rounded-lg border text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors'
-const inputDefault = `${inputClass} border-gray-300 dark:border-gray-600`
-const inputError = `${inputClass} border-red-500 dark:border-red-500`
-
 export default function ResetPasswordScreen({ token, onComplete }: ResetPasswordScreenProps) {
   const { isDark, toggleTheme } = useTheme()
   const [apiError, setApiError] = useState<string | null>(null)
-  const [showPassword, setShowPassword] = useState(false)
-  const [showConfirm, setShowConfirm] = useState(false)
 
   const {
     register,
@@ -60,7 +25,6 @@ export default function ResetPasswordScreen({ token, onComplete }: ResetPassword
   } = useForm<ResetPasswordFormData>()
 
   const passwordValue = watch('password', '')
-  const strength = getPasswordStrength(passwordValue)
 
   const onSubmit = async (data: ResetPasswordFormData): Promise<void> => {
     setApiError(null)
@@ -82,20 +46,6 @@ export default function ResetPasswordScreen({ token, onComplete }: ResetPassword
       setApiError('Unable to connect to the server. Please try again.')
     }
   }
-
-  const EyeIcon = () => (
-    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
-  )
-
-  const EyeOffIcon = () => (
-    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
-      <line x1="1" y1="1" x2="23" y2="23" />
-    </svg>
-  )
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col transition-colors duration-200">
@@ -157,92 +107,36 @@ export default function ResetPasswordScreen({ token, onComplete }: ResetPassword
 
             <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
               {/* Password */}
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                  New Password
-                </label>
-                <div className="relative">
-                  <input
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    autoComplete="new-password"
-                    placeholder="Create a new password"
-                    className={errors.password ? inputError : inputDefault}
-                    {...register('password', {
-                      required: 'Password is required',
-                      minLength: { value: 8, message: 'Password must be at least 8 characters' },
-                      validate: {
-                        uppercase: (v) => /[A-Z]/.test(v) || 'Must contain at least one uppercase letter',
-                        lowercase: (v) => /[a-z]/.test(v) || 'Must contain at least one lowercase letter',
-                        number: (v) => /\d/.test(v) || 'Must contain at least one number',
-                        special: (v) => /[^A-Za-z0-9]/.test(v) || 'Must contain at least one special character',
-                      },
-                    })}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-                    aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  >
-                    {showPassword ? <EyeOffIcon /> : <EyeIcon />}
-                  </button>
-                </div>
-                {errors.password && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.password.message}</p>}
-
-                {/* Strength indicator */}
-                {passwordValue.length > 0 && (
-                  <div className="mt-2">
-                    <div className="flex gap-1">
-                      {[1, 2, 3, 4, 5].map((i) => (
-                        <div
-                          key={i}
-                          className={`h-1 flex-1 rounded-full transition-colors ${
-                            i <= strength.score ? strengthColors[strength.level] : 'bg-gray-200 dark:bg-gray-600'
-                          }`}
-                        />
-                      ))}
-                    </div>
-                    <p className={`text-xs mt-1 ${
-                      strength.level === 'weak' ? 'text-red-500' :
-                      strength.level === 'fair' ? 'text-yellow-500' :
-                      strength.level === 'good' ? 'text-blue-500' :
-                      'text-green-500'
-                    }`}>
-                      {strengthLabels[strength.level]}
-                    </p>
-                  </div>
-                )}
-              </div>
+              <PasswordField
+                label="New Password"
+                placeholder="Create a new password"
+                register={register('password', {
+                  required: 'Password is required',
+                  minLength: { value: 8, message: 'Password must be at least 8 characters' },
+                  validate: {
+                    uppercase: (v) => /[A-Z]/.test(v) || 'Must contain at least one uppercase letter',
+                    lowercase: (v) => /[a-z]/.test(v) || 'Must contain at least one lowercase letter',
+                    number: (v) => /\d/.test(v) || 'Must contain at least one number',
+                    special: (v) => /[^A-Za-z0-9]/.test(v) || 'Must contain at least one special character',
+                  },
+                })}
+                error={errors.password}
+                showStrength
+                passwordValue={passwordValue}
+                autoComplete="new-password"
+              />
 
               {/* Confirm Password */}
-              <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                  Confirm New Password
-                </label>
-                <div className="relative">
-                  <input
-                    id="confirmPassword"
-                    type={showConfirm ? 'text' : 'password'}
-                    autoComplete="new-password"
-                    placeholder="Confirm your new password"
-                    className={errors.confirmPassword ? inputError : inputDefault}
-                    {...register('confirmPassword', {
-                      required: 'Please confirm your password',
-                      validate: (value) => value === watch('password') || 'Passwords do not match',
-                    })}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirm(!showConfirm)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-                    aria-label={showConfirm ? 'Hide password' : 'Show password'}
-                  >
-                    {showConfirm ? <EyeOffIcon /> : <EyeIcon />}
-                  </button>
-                </div>
-                {errors.confirmPassword && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.confirmPassword.message}</p>}
-              </div>
+              <PasswordField
+                label="Confirm New Password"
+                placeholder="Confirm your new password"
+                register={register('confirmPassword', {
+                  required: 'Please confirm your password',
+                  validate: (value) => value === watch('password') || 'Passwords do not match',
+                })}
+                error={errors.confirmPassword}
+                autoComplete="new-password"
+              />
 
               {/* API Error */}
               {apiError && (
