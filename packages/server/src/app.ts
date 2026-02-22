@@ -1,4 +1,4 @@
-import express, { Request, Response, NextFunction } from 'express'
+import express, { Application, Request, Response, NextFunction } from 'express'
 import cors from 'cors'
 import cookieParser from 'cookie-parser'
 import bcrypt from 'bcrypt'
@@ -93,7 +93,7 @@ function authenticateToken(req: Request, res: Response, next: NextFunction): voi
   }
 }
 
-const app = express()
+const app: Application = express()
 app.use(cors({
   origin: process.env.APP_URL ?? 'http://localhost:3000',
   credentials: true,
@@ -114,6 +114,10 @@ app.get('/api/db-health', async (_req, res) => {
     const message = err instanceof Error ? err.message : 'Unknown error'
     res.status(503).json({ ok: false, error: message })
   }
+})
+
+app.get('/health', (_req, res) => {
+  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() })
 })
 
 app.post('/api/register', async (req: Request, res: Response) => {

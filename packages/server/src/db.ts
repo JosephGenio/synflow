@@ -1,7 +1,10 @@
 import sql from 'mssql'
 import dotenv from 'dotenv'
+import path from 'path'
 
-dotenv.config({ path: '../../.env' })
+// Load from env directory (development) or rely on environment variables (Docker)
+const envPath = path.resolve(__dirname, '../../env/.env.development')
+dotenv.config({ path: envPath })
 
 const config: sql.config = {
   server: process.env.DB_HOST ?? 'localhost',

@@ -17,6 +17,10 @@
 		"db:up": "docker compose up -d",
 		"db:down": "docker compose down",
 		"db:reset": "docker compose down -v && docker compose up -d",
+		"docker:build": "bash scripts/docker-build.sh",
+		"docker:up": "bash scripts/docker-up.sh",
+		"docker:down": "docker compose down",
+		"docker:logs": "docker compose logs -f backend",
 		"prepare": "git config core.hooksPath .githooks"
 	},
 	"devDependencies": {

@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTheme } from './ThemeContext'
 import { isValidEmail } from './utils/validation'
-import PasswordField from './components/PasswordField'
 
 interface RegistrationScreenProps {
   onRegister: () => void
@@ -15,8 +14,6 @@ interface RegistrationFormData {
   lastName: string
   email: string
   contactNumber: string
-  password: string
-  confirmPassword: string
 }
 
 const inputClass = 'w-full px-3.5 py-2.5 rounded-lg border text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors'
@@ -29,13 +26,10 @@ export default function RegistrationScreen({ onRegister, onBackToLogin }: Regist
   const {
     register,
     handleSubmit,
-    watch,
     formState: { errors, isSubmitting },
   } = useForm<RegistrationFormData>({
     defaultValues: { contactNumber: '+63' },
   })
-
-  const passwordValue = watch('password', '')
 
   const onSubmit = async (data: RegistrationFormData): Promise<void> => {
     setApiError(null)
@@ -205,44 +199,6 @@ export default function RegistrationScreen({ onRegister, onBackToLogin }: Regist
                     />
                     {errors.contactNumber && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.contactNumber.message}</p>}
                   </div>
-                </div>
-              </div>
-
-              {/* Password Section */}
-              <div>
-                <h2 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">Password</h2>
-                <div className="space-y-5 lg:space-y-4">
-                  {/* Password */}
-                  <PasswordField
-                    label="Password"
-                    placeholder="Create a password"
-                    register={register('password', {
-                      required: 'Password is required',
-                      minLength: { value: 8, message: 'Password must be at least 8 characters' },
-                      validate: {
-                        uppercase: (v) => /[A-Z]/.test(v) || 'Must contain at least one uppercase letter',
-                        lowercase: (v) => /[a-z]/.test(v) || 'Must contain at least one lowercase letter',
-                        number: (v) => /\d/.test(v) || 'Must contain at least one number',
-                        special: (v) => /[^A-Za-z0-9]/.test(v) || 'Must contain at least one special character',
-                      },
-                    })}
-                    error={errors.password}
-                    showStrength
-                    passwordValue={passwordValue}
-                    autoComplete="new-password"
-                  />
-
-                  {/* Confirm Password */}
-                  <PasswordField
-                    label="Confirm Password"
-                    placeholder="Confirm your password"
-                    register={register('confirmPassword', {
-                      required: 'Please confirm your password',
-                      validate: (value) => value === watch('password') || 'Passwords do not match',
-                    })}
-                    error={errors.confirmPassword}
-                    autoComplete="new-password"
-                  />
                 </div>
               </div>
 

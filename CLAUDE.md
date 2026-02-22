@@ -49,6 +49,40 @@ Always run commands from the workspace root unless working in an isolated packag
 
 ---
 
+## Docker Commands
+
+| Task | Command |
+|---|---|
+| Start dev environment | `pnpm docker:up` |
+| Stop dev environment | `pnpm docker:down` |
+| View backend logs | `pnpm docker:logs` |
+| Build production images | `pnpm docker:build` |
+| Rebuild after changes | `docker compose up -d --build backend` |
+| Access MSSQL database | `docker exec -it synflow-mssql /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P <password>` |
+
+### Docker Development Setup
+
+1. Copy `env/.env.example` to `env/.env.development` and configure with your values
+2. Run `pnpm docker:up` to start the development environment
+3. Backend runs on `http://localhost:3001` with hot reload (ts-node-dev)
+4. MSSQL runs on `localhost:1433`
+5. Run `pnpm dev:app` in another terminal to start the frontend on `http://localhost:3000`
+
+**Note:** The backend connects to MSSQL via the service name `mssql` when running in Docker. The `env/.env.development` file has `DB_HOST=mssql` configured for Docker.
+
+### Environment Configuration
+
+All environment configurations are stored in the `env/` directory:
+
+- `env/.env.example` — Template file (committed to git)
+- `env/.env.development` — Local development (git-ignored)
+- `env/.env.staging` — Staging environment (git-ignored)
+- `env/.env.production` — Production environment (git-ignored)
+
+Each environment file should be created from the `.env.example` template and customized for its environment.
+
+---
+
 ## Tech Stack
 
 ### Frontend — `packages/app`
