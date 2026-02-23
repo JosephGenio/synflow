@@ -1,0 +1,59 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches:
+      - staging
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Deploy to Oracle Cloud VM via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.STAGING_VM_HOST }}
+          username: ${{ secrets.STAGING_VM_USER }}
+          key: ${{ secrets.STAGING_VM_SSH_KEY }}
+          port: 22
+          script_stop: true
+          script: |
+            set -e
+
+            # Navigate to the project directory
+            cd ~/synflow
+
+            # Pull latest code from staging branch
+            git fetch origin
+            git checkout staging
+            git reset --hard origin/staging
+
+            # Write the staging env file from the secret
+            mkdir -p env
+            cat > env/.env.staging << 'ENVEOF'
+            ${{ secrets.STAGING_ENV_FILE }}
+            ENVEOF
+
+            # Rebuild and restart containers
+            docker compose -f docker-compose.staging.yml up -d --build
+
+            # Wait for backend healthcheck to pass (max 60s)
+            echo "Waiting for backend to become healthy..."
+            for i in $(seq 1 12); do
+              STATUS=$(docker inspect --format='{{.State.Health.Status}}' synflow-backend-staging 2>/dev/null || echo "missing")
+              if [ "$STATUS" = "healthy" ]; then
+                echo "Backend is healthy."
+                break
+              fi
+              if [ "$i" = "12" ]; then
+                echo "Backend did not become healthy in time."
+                docker logs synflow-backend-staging --tail 50
+                exit 1
+              fi
+              echo "  attempt $i/12 — status: $STATUS — waiting 5s..."
+              sleep 5
+            done
+
+            echo "Staging deployment complete."
