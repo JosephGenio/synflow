@@ -37,7 +37,7 @@ jobs:
             ENVEOF
 
             # Rebuild and restart containers
-            docker compose -f docker-compose.staging.yml up -d --build
+            docker compose --env-file env/.env.staging -f docker-compose.staging.yml up -d --build
 
             # Wait for backend healthcheck to pass (max 60s)
             echo "Waiting for backend to become healthy..."
