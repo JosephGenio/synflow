@@ -1,4 +1,4 @@
-import express, { Request, Response, NextFunction } from 'express'
+import express, { Request, Response, NextFunction, Application } from 'express'
 import cors from 'cors'
 import cookieParser from 'cookie-parser'
 import bcrypt from 'bcrypt'
@@ -93,7 +93,7 @@ function authenticateToken(req: Request, res: Response, next: NextFunction): voi
   }
 }
 
-const app = express()
+const app: Application = express()
 app.use(cors({
   origin: process.env.APP_URL ?? 'http://localhost:3000',
   credentials: true,
