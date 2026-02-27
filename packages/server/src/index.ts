@@ -1,5 +1,6 @@
 import app from './app'
 import { getPool, closePool } from './db'
+import { runMigrations } from './migrate'
 import { Server } from 'http'
 import { execSync } from 'child_process'
 
@@ -90,6 +91,7 @@ async function start(): Promise<void> {
   try {
     await getPool()
     console.log('Connected to PostgreSQL database')
+    await runMigrations()
   } catch (err) {
     console.error('Failed to connect to database:', err)
     process.exit(1)

@@ -6,7 +6,9 @@
     "dev": "ts-node-dev --respawn --transpile-only --exit-child src/index.ts",
     "build": "tsc -p .",
     "start": "node dist/index.js",
-    "test": "jest"
+    "test": "jest",
+    "migrate": "ts-node src/migrate.ts",
+    "migrate:rollback": "ts-node src/migrate.ts --rollback"
   },
   "dependencies": {
     "@getbrevo/brevo": "^4.0.1",

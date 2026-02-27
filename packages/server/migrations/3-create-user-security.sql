@@ -1,0 +1,12 @@
+-- UP
+CREATE TABLE IF NOT EXISTS "UserSecurity" (
+  "KeyUserSecurity" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  "KeyUser" UUID NOT NULL REFERENCES "User"("KeyUser") ON DELETE CASCADE,
+  "UserName" VARCHAR(50) NOT NULL,
+  "Password" TEXT NOT NULL,
+  "DtCreated" TIMESTAMP NOT NULL DEFAULT NOW(),
+  "LastLogin" TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+-- DOWN
+DROP TABLE IF EXISTS "UserSecurity";

@@ -113,7 +113,7 @@ tools: Read, Edit, Bash, Glob, Grep   # comma-separated tool list
 
 | File | Purpose |
 |---|---|
-| *(none yet — add agents here as the project grows)* | |
+| `migration.md` | Create, run, and manage database migration SQL files |
 
 **How to add an agent:**
 1. Create `.claude/agents/<name>.md`

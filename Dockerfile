@@ -32,7 +32,7 @@ RUN pnpm --filter @synflow/server build
 # Stage 4: Development - Compile and run with tsx
 FROM dependencies AS development
 
-# Copy source code
+# Copy source code and migrations
 COPY packages/server ./packages/server
 COPY tsconfig.json ./
 
@@ -68,6 +68,9 @@ RUN apk add --no-cache python3 make g++ && \
 
 # Copy built application from builder stage
 COPY --chown=nodejs:nodejs --from=builder /app/packages/server/dist ./packages/server/dist
+
+# Copy migration SQL files
+COPY --chown=nodejs:nodejs packages/server/migrations ./packages/server/migrations
 
 # Switch to non-root user
 USER nodejs

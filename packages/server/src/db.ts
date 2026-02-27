@@ -46,54 +46,6 @@ export async function getPool(): Promise<Pool> {
     throw err
   }
 
-  // Create tables if they don't exist
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS "UserRegistration" (
-      "KeyUserRegistration" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      "First" VARCHAR(50) NOT NULL,
-      "Middle" VARCHAR(50) NOT NULL,
-      "Last" VARCHAR(50) NOT NULL,
-      "Email" VARCHAR(100) NOT NULL UNIQUE,
-      "ContactNumber" VARCHAR(13) NOT NULL,
-      "VerificationToken" UUID DEFAULT gen_random_uuid(),
-      "IsVerified" BOOLEAN DEFAULT FALSE,
-      "PasswordHash" VARCHAR(255),
-      "TokenExpiresAt" TIMESTAMP
-    )
-  `)
-
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS "User" (
-      "KeyUser" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      "First" VARCHAR(50) NOT NULL,
-      "Middle" VARCHAR(50) NOT NULL,
-      "Last" VARCHAR(50) NOT NULL,
-      "Email" VARCHAR(100) NOT NULL UNIQUE,
-      "ContactNumber" VARCHAR(13)
-    )
-  `)
-
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS "UserSecurity" (
-      "KeyUserSecurity" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      "KeyUser" UUID NOT NULL REFERENCES "User"("KeyUser") ON DELETE CASCADE,
-      "UserName" VARCHAR(50) NOT NULL,
-      "Password" TEXT NOT NULL,
-      "DtCreated" TIMESTAMP NOT NULL DEFAULT NOW(),
-      "LastLogin" TIMESTAMP NOT NULL DEFAULT NOW()
-    )
-  `)
-
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS "PasswordReset" (
-      "KeyPasswordReset" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      "KeyUser" UUID NOT NULL REFERENCES "User"("KeyUser") ON DELETE CASCADE,
-      "ResetToken" UUID DEFAULT gen_random_uuid(),
-      "TokenExpiresAt" TIMESTAMP NOT NULL,
-      "IsUsed" BOOLEAN DEFAULT FALSE
-    )
-  `)
-
   return pool
 }
 
