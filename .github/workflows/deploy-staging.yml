@@ -45,7 +45,7 @@ jobs:
 
             # Export env variables safely (line-by-line to handle special chars in values)
             set -a
-            while IFS='=' read -r key value; do
+            while IFS='=' read -r key value || [[ -n "$key" ]]; do
               [[ -z "$key" || "$key" =~ ^[[:space:]]*# ]] && continue
               export "$key=$value"
             done < env/.env.staging
