@@ -38,9 +38,11 @@ jobs:
 
             # Write the staging env file from the secret
             mkdir -p env
-            cat > env/.env.staging << 'ENVEOF'
+            rm -f env/.env.staging
+            cat > env/.env.staging <<'ENVEOF'
             ${{ secrets.STAGING_ENV_FILE }}
             ENVEOF
+            chmod 600 env/.env.staging
 
             # Export env variables and rebuild containers
             export $(cat env/.env.staging | xargs)
