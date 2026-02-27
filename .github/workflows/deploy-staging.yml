@@ -39,12 +39,14 @@ jobs:
             # Write the staging env file from the secret
             sudo rm -rf env
             mkdir -p env
-            cat > env/.env.staging <<'ENVEOF'
+            cat <<'ENVEOF' | sed 's/^[[:space:]]*//' > env/.env.staging
             ${{ secrets.STAGING_ENV_FILE }}
             ENVEOF
 
             # Export env variables and rebuild containers
-            export $(cat env/.env.staging | xargs)
+            set -a
+            source <(grep -v '^\s*#' env/.env.staging | grep -v '^\s*$')
+            set +a
             docker compose -f docker-compose.staging.yml up -d --build
 
             # Wait for backend healthcheck to pass (max 60s)
