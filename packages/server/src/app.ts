@@ -90,6 +90,7 @@ function authenticateToken(req: Request, res: Response, next: NextFunction): voi
     next()
   } catch {
     res.status(401).json({ ok: false, error: 'Invalid or expired token' })
+    return
   }
 }
 
@@ -484,7 +485,7 @@ app.post('/api/login', async (req: Request, res: Response) => {
     res.cookie('token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      sameSite: 'lax',
       maxAge: 60 * 60 * 1000,
       path: '/',
     })
