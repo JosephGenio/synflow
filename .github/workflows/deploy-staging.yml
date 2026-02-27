@@ -37,6 +37,7 @@ jobs:
             git reset --hard origin/staging
 
             # Write the staging env file from the secret
+            sudo rm -rf env
             mkdir -p env
             cat > env/.env.staging <<'ENVEOF'
             ${{ secrets.STAGING_ENV_FILE }}
@@ -90,6 +91,3 @@ jobs:
           git add packages/server/package.json
           git commit -m "chore: bump server version to $NEW_VERSION [skip ci]"
           git push origin staging
-
-
-          deploy ALL=(ALL) NOPASSWD: ALL
