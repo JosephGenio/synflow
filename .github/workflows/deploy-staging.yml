@@ -43,8 +43,16 @@ jobs:
             ${{ secrets.STAGING_ENV_FILE }}
             ENVEOF
 
-            # Rebuild containers with the staging env file
-            docker compose -f docker-compose.staging.yml --env-file env/.env.staging up -d --build
+            # Export env variables safely (line-by-line to handle special chars in values)
+            set -a
+            while IFS='=' read -r key value; do
+              [[ -z "$key" || "$key" =~ ^[[:space:]]*# ]] && continue
+              export "$key=$value"
+            done < env/.env.staging
+            set +a
+
+            # Rebuild containers
+            docker compose -f docker-compose.staging.yml up -d --build 2>&1
 
             # Wait for backend healthcheck to pass (max 60s)
             echo "Waiting for backend to become healthy..."
