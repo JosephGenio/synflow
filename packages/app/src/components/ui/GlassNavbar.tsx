@@ -8,6 +8,7 @@ interface GlassNavbarProps {
   links?: NavLink[]
   onLogin?: () => void
   onSignUp?: () => void
+  onBrandClick?: () => void
 }
 
 export default function GlassNavbar({
@@ -15,15 +16,20 @@ export default function GlassNavbar({
   links = [],
   onLogin,
   onSignUp,
+  onBrandClick,
 }: GlassNavbarProps): React.ReactElement {
   return (
     <header className="fixed top-0 left-0 w-full z-50 pt-6 px-4">
       <nav className="max-w-5xl mx-auto flex items-center justify-between bg-black/60 backdrop-blur-xl border border-noir-border rounded-full px-6 py-3 shadow-2xl">
         {/* Brand */}
-        <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={onBrandClick}
+          className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+        >
           <div className="w-5 h-5 bg-accent-red rounded-sm rotate-45" />
           <span className="text-lg font-bold font-manrope tracking-tight">{brandName}</span>
-        </div>
+        </button>
 
         {/* Nav links */}
         {links.length > 0 && (

@@ -8,16 +8,20 @@ import SetPasswordScreen from './SetPasswordScreen'
 import ForgotPasswordScreen from './ForgotPasswordScreen'
 import ResetPasswordScreen from './ResetPasswordScreen'
 import HomeScreen from './HomeScreen'
+import ToolsCollectionScreen from './ToolsCollectionScreen'
 import JsonParserScreen from './tools/JsonParserScreen'
+import featureFlags from './featureFlags'
 
-type View = 'home' | 'login' | 'register' | 'dashboard' | 'set-password' | 'forgot-password' | 'reset-password' | 'json-parser'
+type View = 'home' | 'login' | 'register' | 'dashboard' | 'set-password' | 'forgot-password' | 'reset-password' | 'json-parser' | 'tools-collection'
 
 const pathToView: Record<string, View> = {
   '/tools/json-parser': 'json-parser',
+  '/tools': 'tools-collection',
 }
 
 const viewToPath: Partial<Record<View, string>> = {
   'json-parser': '/tools/json-parser',
+  'tools-collection': '/tools',
   'home': '/',
 }
 
@@ -54,6 +58,11 @@ function AppRoutes() {
   }, [])
 
   useEffect(() => {
+    if (!featureFlags.auth) {
+      setIsCheckingAuth(false)
+      return
+    }
+
     const params = new URLSearchParams(window.location.search)
     const urlView = params.get('view')
     const token = params.get('token')
@@ -102,58 +111,70 @@ function AppRoutes() {
     )
   }
 
-  if (view === 'dashboard' && user) {
-    return (
-      <DashboardScreen
-        user={user}
-        onLogout={() => {
-          setUser(null)
-          navigate('login')
+  if (featureFlags.auth) {
+    if (view === 'dashboard' && user) {
+      return (
+        <DashboardScreen
+          user={user}
+          onLogout={() => {
+            setUser(null)
+            navigate('login')
+          }}
+        />
+      )
+    }
+    if (view === 'set-password' && verifyToken) return (
+      <SetPasswordScreen
+        token={verifyToken}
+        onComplete={() => navigate('login')}
+      />
+    )
+    if (view === 'reset-password' && verifyToken) return (
+      <ResetPasswordScreen
+        token={verifyToken}
+        onComplete={() => navigate('login')}
+      />
+    )
+    if (view === 'forgot-password') return (
+      <ForgotPasswordScreen
+        onBackToLogin={() => navigate('login')}
+      />
+    )
+    if (view === 'register') return (
+      <RegistrationScreen
+        onRegister={() => navigate('login')}
+        onBackToLogin={() => navigate('login')}
+      />
+    )
+    if (view === 'login') return (
+      <LoginScreen
+        onLogin={(userData) => {
+          setUser(userData)
+          navigate('dashboard')
         }}
+        onSignUp={() => navigate('register')}
+        onForgotPassword={() => navigate('forgot-password')}
       />
     )
   }
-  if (view === 'set-password' && verifyToken) return (
-    <SetPasswordScreen
-      token={verifyToken}
-      onComplete={() => navigate('login')}
-    />
-  )
-  if (view === 'reset-password' && verifyToken) return (
-    <ResetPasswordScreen
-      token={verifyToken}
-      onComplete={() => navigate('login')}
-    />
-  )
-  if (view === 'forgot-password') return (
-    <ForgotPasswordScreen
-      onBackToLogin={() => navigate('login')}
-    />
-  )
-  if (view === 'register') return (
-    <RegistrationScreen
-      onRegister={() => navigate('login')}
-      onBackToLogin={() => navigate('login')}
-    />
-  )
-  if (view === 'json-parser') return (
+
+  if (featureFlags.tools.jsonParser && view === 'json-parser') return (
     <JsonParserScreen onHome={() => navigate('home')} />
   )
-  if (view === 'login') return (
-    <LoginScreen
-      onLogin={(userData) => {
-        setUser(userData)
-        navigate('dashboard')
-      }}
-      onSignUp={() => navigate('register')}
-      onForgotPassword={() => navigate('forgot-password')}
+
+  if (view === 'tools-collection') return (
+    <ToolsCollectionScreen
+      onHome={() => navigate('home')}
+      onJsonParser={featureFlags.tools.jsonParser ? () => navigate('json-parser') : undefined}
     />
   )
+
   return (
     <HomeScreen
-      onLogin={() => navigate('login')}
-      onSignUp={() => navigate('register')}
-      onJsonParser={() => navigate('json-parser')}
+      onLogin={featureFlags.auth ? () => navigate('login') : undefined}
+      onSignUp={featureFlags.auth ? () => navigate('register') : undefined}
+      onJsonParser={featureFlags.tools.jsonParser ? () => navigate('json-parser') : undefined}
+      onToolsCollection={() => navigate('tools-collection')}
     />
   )
 }
