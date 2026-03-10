@@ -106,7 +106,7 @@ export default function RegistrationScreen({ onRegister, onBackToLogin }: Regist
                 <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
               </svg>
             </div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">synflow</h1>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">synflo</h1>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Create your account</p>
           </div>
 
@@ -282,7 +282,7 @@ export default function RegistrationScreen({ onRegister, onBackToLogin }: Regist
       <footer className="py-6 px-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 transition-colors duration-200">
         <div className="max-w-md lg:max-w-2xl mx-auto flex flex-col items-center gap-1 text-center">
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            &copy; {new Date().getFullYear()} Synflow. All rights reserved.
+            &copy; {new Date().getFullYear()} Synflo. All rights reserved.
           </p>
           <p className="text-xs text-gray-400 dark:text-gray-500">
             Built with React &amp; TypeScript &mdash; v0.1.0

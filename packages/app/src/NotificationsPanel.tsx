@@ -13,7 +13,7 @@ const mockNotifications: Notification[] = [
   { id: 1, title: 'New project assigned', description: 'You have been added to Project Alpha', time: '5m ago', read: false, type: 'project' },
   { id: 2, title: 'Task completed', description: 'Design review was marked as done', time: '30m ago', read: false, type: 'task' },
   { id: 3, title: 'You were mentioned', description: '@you in #general: "Great work on the dashboard!"', time: '2h ago', read: false, type: 'mention' },
-  { id: 4, title: 'System update', description: 'Synflow has been updated to v0.2.0', time: '1d ago', read: true, type: 'system' },
+  { id: 4, title: 'System update', description: 'Synflo has been updated to v0.2.0', time: '1d ago', read: true, type: 'system' },
 ]
 
 function NotificationIcon({ type }: { type: Notification['type'] }): React.ReactElement {

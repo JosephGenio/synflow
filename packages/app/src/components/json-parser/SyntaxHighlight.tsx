@@ -52,12 +52,12 @@ function tokenize(json: string): Token[] {
 }
 
 const colorMap: Record<Token['type'], string> = {
-  key: 'text-indigo-600 dark:text-indigo-400',
-  string: 'text-green-600 dark:text-green-400',
-  number: 'text-amber-600 dark:text-amber-400',
-  boolean: 'text-blue-600 dark:text-blue-400',
-  null: 'text-red-500 dark:text-red-400',
-  structural: 'text-gray-500 dark:text-gray-400',
+  key: 'text-accent-red',
+  string: 'text-green-400',
+  number: 'text-amber-400',
+  boolean: 'text-blue-400',
+  null: 'text-red-400',
+  structural: 'text-zinc-500',
   whitespace: '',
 }
 
@@ -102,7 +102,7 @@ export default function SyntaxHighlight({ json, highlightLine }: SyntaxHighlight
 
           if (isHighlighted) {
             return (
-              <span key={lineIdx} ref={highlightRef} className="bg-yellow-200 dark:bg-yellow-900/40 rounded-sm">
+              <span key={lineIdx} ref={highlightRef} className="bg-accent-red/20 rounded-sm">
                 {content}
                 {lineIdx < lines.length - 1 ? '\n' : ''}
               </span>

@@ -1,5 +1,4 @@
-import { useState, useMemo, useCallback, useRef } from 'react'
-import { useTheme } from '../ThemeContext'
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import type { OutputTab } from '../components/json-parser/types'
 import { parseJson, buildTree, computeStats, searchJson, formatJson, minifyJson, buildPathLineMap, findKeyInInput } from '../components/json-parser/utils'
 import JsonTreeView from '../components/json-parser/JsonTreeView'
@@ -19,7 +18,6 @@ const tabs: { key: OutputTab; label: string }[] = [
 ]
 
 export default function JsonParserScreen({ onHome }: JsonParserScreenProps): React.ReactElement {
-  const { isDark, toggleTheme } = useTheme()
   const [input, setInput] = useState('')
   const [activeTab, setActiveTab] = useState<OutputTab>('tree')
   const [selectedPath, setSelectedPath] = useState<string | null>(null)
@@ -27,8 +25,17 @@ export default function JsonParserScreen({ onHome }: JsonParserScreenProps): Rea
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null)
   const [fileError, setFileError] = useState<string | null>(null)
   const [highlightLine, setHighlightLine] = useState<number | undefined>(undefined)
+  const [isFullscreen, setIsFullscreen] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent): void {
+      if (e.key === 'Escape' && isFullscreen) setIsFullscreen(false)
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isFullscreen])
 
   const validationResult = useMemo(() => parseJson(input), [input])
 
@@ -135,16 +142,20 @@ export default function JsonParserScreen({ onHome }: JsonParserScreenProps): Rea
     }
   }, [pathLineMap, input])
 
+  const actionBtnClass = 'text-xs px-2.5 py-1 rounded-md bg-white/5 border border-noir-border text-zinc-300 hover:bg-white/10 hover:text-white transition-colors'
+
   return (
-    <div className="h-screen bg-gray-50 dark:bg-gray-900 transition-colors flex flex-col overflow-hidden">
+    <div className="bg-black text-white font-inter flex flex-col selection-red">
+      {/* Tool area — fills exactly one viewport */}
+      <div className="h-screen flex flex-col overflow-hidden">
       {/* Header */}
-      <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex-shrink-0">
+      <header className="border-b border-noir-border bg-black/60 backdrop-blur-xl px-4 py-3 flex-shrink-0">
         <div className="flex items-center justify-between max-w-screen-2xl mx-auto">
           <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={onHome}
-              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors"
+              className="p-2 rounded-lg hover:bg-white/5 text-zinc-400 hover:text-white transition-colors"
               aria-label="Back to home"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -152,16 +163,11 @@ export default function JsonParserScreen({ onHome }: JsonParserScreenProps): Rea
                 <path d="M12 19l-7-7 7-7" />
               </svg>
             </button>
-            <h1 className="text-lg font-semibold text-gray-900 dark:text-white">JSON Parser</h1>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 bg-accent-red rounded-sm rotate-45" />
+              <h1 className="text-lg font-semibold font-manrope tracking-tight">JSON Parser</h1>
+            </div>
           </div>
-          <button
-            type="button"
-            onClick={toggleTheme}
-            className="p-2 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-            aria-label="Toggle theme"
-          >
-            {isDark ? '☀️' : '🌙'}
-          </button>
         </div>
       </header>
 
@@ -169,15 +175,15 @@ export default function JsonParserScreen({ onHome }: JsonParserScreenProps): Rea
       <div className="flex flex-col lg:flex-row gap-4 p-4 lg:p-6 max-w-screen-2xl mx-auto flex-1 min-h-0 w-full">
         {/* Left: Input Panel */}
         <div className="w-full lg:w-1/2 flex flex-col min-h-0">
-          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden flex-1 min-h-0">
+          <div className="bg-noir-surface rounded-xl border border-noir-border flex flex-col overflow-hidden flex-1 min-h-0">
             {/* Input Header */}
-            <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Input</span>
+            <div className="flex items-center justify-between px-4 py-2.5 border-b border-noir-border flex-shrink-0">
+              <span className="text-sm font-medium text-zinc-300">Input</span>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="text-xs px-2.5 py-1 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                  className={actionBtnClass}
                 >
                   Upload
                 </button>
@@ -191,7 +197,7 @@ export default function JsonParserScreen({ onHome }: JsonParserScreenProps): Rea
                 <button
                   type="button"
                   onClick={handlePaste}
-                  className="text-xs px-2.5 py-1 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                  className={actionBtnClass}
                 >
                   Paste
                 </button>
@@ -204,7 +210,7 @@ export default function JsonParserScreen({ onHome }: JsonParserScreenProps): Rea
                     setFileError(null)
                     setHighlightLine(undefined)
                   }}
-                  className="text-xs px-2.5 py-1 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                  className={actionBtnClass}
                 >
                   Clear
                 </button>
@@ -213,17 +219,17 @@ export default function JsonParserScreen({ onHome }: JsonParserScreenProps): Rea
 
             {/* File Upload Error */}
             {fileError && (
-              <div className="flex items-center gap-2 px-4 py-2 bg-red-50 dark:bg-red-900/20 border-b border-red-200 dark:border-red-800 flex-shrink-0">
+              <div className="flex items-center gap-2 px-4 py-2 bg-red-900/20 border-b border-red-800 flex-shrink-0">
                 <svg className="w-4 h-4 text-red-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="12" cy="12" r="10" />
                   <path d="M12 8v4" />
                   <path d="M12 16h.01" />
                 </svg>
-                <span className="text-xs text-red-700 dark:text-red-400">{fileError}</span>
+                <span className="text-xs text-red-400">{fileError}</span>
                 <button
                   type="button"
                   onClick={() => setFileError(null)}
-                  className="ml-auto text-red-400 hover:text-red-600 dark:hover:text-red-300"
+                  className="ml-auto text-red-400 hover:text-red-300"
                   aria-label="Dismiss error"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -240,7 +246,7 @@ export default function JsonParserScreen({ onHome }: JsonParserScreenProps): Rea
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder='Paste or type JSON here...'
-              className="w-full flex-1 min-h-0 p-4 font-mono text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800 focus:outline-none resize-none placeholder-gray-400 dark:placeholder-gray-500"
+              className="w-full flex-1 min-h-0 p-4 font-mono text-sm text-white bg-noir-surface focus:outline-none resize-none placeholder-zinc-600"
               spellCheck={false}
             />
 
@@ -248,15 +254,15 @@ export default function JsonParserScreen({ onHome }: JsonParserScreenProps): Rea
             {input.trim() && (
               <div className={`flex items-center gap-2 px-4 py-2 border-t flex-shrink-0 ${
                 validationResult.valid
-                  ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
-                  : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+                  ? 'bg-green-900/20 border-green-800'
+                  : 'bg-red-900/20 border-red-800'
               }`}>
                 {validationResult.valid ? (
                   <>
                     <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M20 6L9 17l-5-5" />
                     </svg>
-                    <span className="text-xs font-medium text-green-700 dark:text-green-400">Valid JSON</span>
+                    <span className="text-xs font-medium text-green-400">Valid JSON</span>
                   </>
                 ) : (
                   <>
@@ -265,7 +271,7 @@ export default function JsonParserScreen({ onHome }: JsonParserScreenProps): Rea
                       <path d="M15 9l-6 6" />
                       <path d="M9 9l6 6" />
                     </svg>
-                    <span className="text-xs text-red-700 dark:text-red-400">
+                    <span className="text-xs text-red-400">
                       <span className="font-medium">Invalid JSON</span>
                       {validationResult.error && (
                         <span>
@@ -281,9 +287,9 @@ export default function JsonParserScreen({ onHome }: JsonParserScreenProps): Rea
               </div>
             )}
 
-            {/* Stats — inside card, collapsible */}
+            {/* Stats */}
             {stats && (
-              <div className="border-t border-gray-200 dark:border-gray-700 flex-shrink-0 max-h-48 overflow-y-auto">
+              <div className="border-t border-noir-border flex-shrink-0 max-h-48 overflow-y-auto">
                 <JsonStatsPanel stats={stats} />
               </div>
             )}
@@ -291,8 +297,8 @@ export default function JsonParserScreen({ onHome }: JsonParserScreenProps): Rea
         </div>
 
         {/* Right: Output Panel */}
-        <div className="w-full lg:w-1/2 flex flex-col gap-3 min-h-0">
-          {/* Search — top of right panel */}
+        <div className={`flex flex-col gap-3 min-h-0 ${isFullscreen ? 'hidden' : 'w-full lg:w-1/2'}`}>
+          {/* Search */}
           {tree && (
             <div className="flex-shrink-0">
               <JsonSearch
@@ -304,10 +310,10 @@ export default function JsonParserScreen({ onHome }: JsonParserScreenProps): Rea
             </div>
           )}
 
-          {/* Output Card — fills remaining height */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden flex-1 min-h-0">
+          {/* Output Card */}
+          <div className="bg-noir-surface rounded-xl border border-noir-border flex flex-col overflow-hidden flex-1 min-h-0">
             {/* Tab Bar */}
-            <div className="flex items-center gap-1 px-4 py-2.5 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+            <div className="flex items-center gap-1 px-4 py-2.5 border-b border-noir-border flex-shrink-0">
               {tabs.map((tab) => (
                 <button
                   key={tab.key}
@@ -315,34 +321,48 @@ export default function JsonParserScreen({ onHome }: JsonParserScreenProps): Rea
                   onClick={() => setActiveTab(tab.key)}
                   className={`text-xs px-3 py-1.5 rounded-md font-medium transition-colors ${
                     activeTab === tab.key
-                      ? 'bg-indigo-600 text-white'
-                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                      ? 'bg-accent-red text-white'
+                      : 'text-zinc-400 hover:bg-white/5 hover:text-white'
                   }`}
                 >
                   {tab.label}
                 </button>
               ))}
+              <button
+                type="button"
+                onClick={() => setIsFullscreen(true)}
+                className="ml-auto p-1.5 rounded-md text-zinc-500 hover:bg-white/5 hover:text-white transition-colors"
+                aria-label="Fullscreen output"
+                title="Fullscreen"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M8 3H5a2 2 0 0 0-2 2v3" />
+                  <path d="M21 8V5a2 2 0 0 0-2-2h-3" />
+                  <path d="M3 16v3a2 2 0 0 0 2 2h3" />
+                  <path d="M16 21h3a2 2 0 0 0 2-2v-3" />
+                </svg>
+              </button>
             </div>
 
             {/* Selected Path */}
             {selectedPath && (
-              <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-                <span className="text-xs text-gray-500 dark:text-gray-400">Path:</span>
-                <code className="text-xs font-mono text-indigo-600 dark:text-indigo-400 truncate">{selectedPath}</code>
+              <div className="flex items-center gap-2 px-4 py-2 bg-white/5 border-b border-noir-border flex-shrink-0">
+                <span className="text-xs text-zinc-500">Path:</span>
+                <code className="text-xs font-mono text-accent-red truncate">{selectedPath}</code>
                 <button
                   type="button"
                   onClick={() => handleCopy(selectedPath, 'Path')}
-                  className="text-xs px-2 py-0.5 rounded bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors flex-shrink-0"
+                  className="text-xs px-2 py-0.5 rounded bg-white/5 border border-noir-border text-zinc-300 hover:bg-white/10 transition-colors flex-shrink-0"
                 >
                   Copy
                 </button>
               </div>
             )}
 
-            {/* Tab Content — scrollable */}
+            {/* Tab Content */}
             <div className="flex-1 overflow-auto p-4 min-h-0">
               {!validationResult.valid ? (
-                <div className="flex items-center justify-center h-full text-gray-400 dark:text-gray-500 text-sm">
+                <div className="flex items-center justify-center h-full text-zinc-500 text-sm">
                   {input.trim() ? 'Fix JSON errors to see output' : 'Paste JSON to get started'}
                 </div>
               ) : activeTab === 'tree' && tree ? (
@@ -354,7 +374,7 @@ export default function JsonParserScreen({ onHome }: JsonParserScreenProps): Rea
               ) : activeTab === 'formatted' ? (
                 <SyntaxHighlight json={formatted} highlightLine={highlightLine} />
               ) : activeTab === 'minified' ? (
-                <pre className="font-mono text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-all">
+                <pre className="font-mono text-sm text-zinc-200 whitespace-pre-wrap break-all">
                   {minified}
                 </pre>
               ) : null}
@@ -362,18 +382,18 @@ export default function JsonParserScreen({ onHome }: JsonParserScreenProps): Rea
 
             {/* Copy Footer */}
             {validationResult.valid && (
-              <div className="flex items-center gap-2 px-4 py-2.5 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
+              <div className="flex items-center gap-2 px-4 py-2.5 border-t border-noir-border flex-shrink-0">
                 <button
                   type="button"
                   onClick={() => handleCopy(formatted, 'Formatted')}
-                  className="text-xs px-3 py-1.5 rounded-md bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
+                  className="text-xs px-3 py-1.5 rounded-md bg-accent-red text-white hover:bg-red-700 transition-colors"
                 >
                   {copyFeedback === 'Formatted' ? 'Copied!' : 'Copy Formatted'}
                 </button>
                 <button
                   type="button"
                   onClick={() => handleCopy(minified, 'Minified')}
-                  className="text-xs px-3 py-1.5 rounded-md border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  className="text-xs px-3 py-1.5 rounded-md border border-noir-border text-zinc-300 hover:bg-white/5 transition-colors"
                 >
                   {copyFeedback === 'Minified' ? 'Copied!' : 'Copy Minified'}
                 </button>
@@ -381,7 +401,7 @@ export default function JsonParserScreen({ onHome }: JsonParserScreenProps): Rea
                   <button
                     type="button"
                     onClick={() => handleCopy(selectedPath, 'Path')}
-                    className="text-xs px-3 py-1.5 rounded-md border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                    className="text-xs px-3 py-1.5 rounded-md border border-noir-border text-zinc-300 hover:bg-white/5 transition-colors"
                   >
                     {copyFeedback === 'Path' ? 'Copied!' : 'Copy Path'}
                   </button>
@@ -392,7 +412,115 @@ export default function JsonParserScreen({ onHome }: JsonParserScreenProps): Rea
         </div>
       </div>
 
-      {/* Footer */}
+      </div>
+
+      {/* Fullscreen Output Popup */}
+      {isFullscreen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-6" onClick={() => setIsFullscreen(false)}>
+          <div className="w-full max-w-6xl h-[90vh] bg-noir-surface border border-noir-border rounded-2xl shadow-2xl shadow-accent-red/5 flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            {/* Popup Header */}
+            <div className="flex items-center gap-1 px-5 py-3 border-b border-noir-border flex-shrink-0">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => setActiveTab(tab.key)}
+                  className={`text-xs px-3 py-1.5 rounded-md font-medium transition-colors ${
+                    activeTab === tab.key
+                      ? 'bg-accent-red text-white'
+                      : 'text-zinc-400 hover:bg-white/5 hover:text-white'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+
+              <div className="ml-auto flex items-center gap-2">
+                {validationResult.valid && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => handleCopy(formatted, 'Formatted')}
+                      className="text-xs px-3 py-1.5 rounded-md bg-accent-red text-white hover:bg-red-700 transition-colors"
+                    >
+                      {copyFeedback === 'Formatted' ? 'Copied!' : 'Copy Formatted'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleCopy(minified, 'Minified')}
+                      className="text-xs px-3 py-1.5 rounded-md border border-noir-border text-zinc-300 hover:bg-white/5 transition-colors"
+                    >
+                      {copyFeedback === 'Minified' ? 'Copied!' : 'Copy Minified'}
+                    </button>
+                  </>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setIsFullscreen(false)}
+                  className="p-1.5 rounded-md text-zinc-400 hover:bg-white/5 hover:text-white transition-colors"
+                  aria-label="Exit fullscreen"
+                  title="Exit fullscreen (Esc)"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M18 6 6 18" />
+                    <path d="m6 6 12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Search — own row, outside header flex */}
+            {tree && (
+              <div className="px-5 py-2 border-b border-noir-border flex-shrink-0">
+                <JsonSearch
+                  matches={searchMatches}
+                  query={searchQuery}
+                  onQueryChange={handleSearchQueryChange}
+                  onSelectMatch={handleSelectMatch}
+                />
+              </div>
+            )}
+
+            {/* Selected Path */}
+            {selectedPath && (
+              <div className="flex items-center gap-2 px-5 py-2 bg-white/5 border-b border-noir-border flex-shrink-0">
+                <span className="text-xs text-zinc-500">Path:</span>
+                <code className="text-xs font-mono text-accent-red truncate">{selectedPath}</code>
+                <button
+                  type="button"
+                  onClick={() => handleCopy(selectedPath, 'Path')}
+                  className="text-xs px-2 py-0.5 rounded bg-white/5 border border-noir-border text-zinc-300 hover:bg-white/10 transition-colors flex-shrink-0"
+                >
+                  {copyFeedback === 'Path' ? 'Copied!' : 'Copy'}
+                </button>
+              </div>
+            )}
+
+            {/* Popup Content */}
+            <div className="flex-1 overflow-auto p-5 min-h-0">
+              {!validationResult.valid ? (
+                <div className="flex items-center justify-center h-full text-zinc-500 text-sm">
+                  {input.trim() ? 'Fix JSON errors to see output' : 'Paste JSON to get started'}
+                </div>
+              ) : activeTab === 'tree' && tree ? (
+                <JsonTreeView
+                  node={tree}
+                  searchQuery={searchQuery}
+                  onSelectPath={setSelectedPath}
+                />
+              ) : activeTab === 'formatted' ? (
+                <SyntaxHighlight json={formatted} highlightLine={highlightLine} />
+              ) : activeTab === 'minified' ? (
+                <pre className="font-mono text-sm text-zinc-200 whitespace-pre-wrap break-all">
+                  {minified}
+                </pre>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Footer — visible only when scrolling past the fold */}
       <Footer />
     </div>
   )
