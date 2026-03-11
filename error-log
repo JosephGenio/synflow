@@ -1,0 +1,111 @@
+##[debug]Evaluating condition for step: 'Deploy to Oracle Cloud VM via SSH'
+##[debug]Evaluating: success()
+##[debug]Evaluating success:
+##[debug]=> true
+##[debug]Result: true
+##[debug]Starting: Deploy to Oracle Cloud VM via SSH
+##[debug]Loading inputs
+##[debug]Evaluating: secrets.STAGING_VM_HOST
+##[debug]Evaluating Index:
+##[debug]..Evaluating secrets:
+##[debug]..=> Object
+##[debug]..Evaluating String:
+##[debug]..=> 'STAGING_VM_HOST'
+##[debug]=> '***'
+##[debug]Result: '***'
+##[debug]Evaluating: secrets.STAGING_VM_USER
+##[debug]Evaluating Index:
+##[debug]..Evaluating secrets:
+##[debug]..=> Object
+##[debug]..Evaluating String:
+##[debug]..=> 'STAGING_VM_USER'
+##[debug]=> '***'
+##[debug]Result: '***'
+##[debug]Evaluating: secrets.STAGING_VM_SSH_KEY
+##[debug]Evaluating Index:
+##[debug]..Evaluating secrets:
+##[debug]..=> Object
+##[debug]..Evaluating String:
+##[debug]..=> 'STAGING_VM_SSH_KEY'
+##[debug]=> '***
+##[debug]***
+##[debug]***
+##[debug]***
+##[debug]***
+##[debug]***
+##[debug]***
+##[debug]***
+##[debug]***
+##[debug]***
+##[debug]***
+##[debug]***
+##[debug]***
+##[debug]***
+##[debug]***
+##[debug]***
+##[debug]***
+##[debug]***
+##[debug]***
+##[debug]***
+##[debug]***
+***
+***
+***
+***
+***
+***
+***
+***
+***
+***
+***
+***
+***
+***
+***
+***
+***
+***
+***
+***
+***
+***
+***
+***
+***
+***
+***
+***
+ENVEOF
+# Export env variables safely (line-by-line to handle special chars in values)
+set -a
+while IFS='=' read -r key value || [[ -n "$key" ]]; do
+  [[ -z "$key" || "$key" =~ ^[[:space:]]*# ]] && continue
+  export "$key=$value"
+done < env/.env.staging
+set +a
+# Rebuild containers
+docker compose -f docker-compose.staging.yml up -d --build 2>&1
+# Wait for backend healthcheck to pass (max 60s)
+echo "Waiting for backend to become healthy..."
+for i in $(seq 1 12); do
+  STATUS=$(docker inspect --format='{{.State.Health.Status}}' synflow-backend-staging 2>/dev/null || echo "missing")
+  if [ "$STATUS" = "healthy" ]; then
+    echo "Backend is healthy."
+    break
+  fi
+  if [ "$i" = "12" ]; then
+    echo "Backend did not become healthy in time."
+    docker logs synflow-backend-staging --tail 50
+    exit 1
+  fi
+  echo "  attempt $i/12 — status: $STATUS — waiting 5s..."
+  sleep 5
+done
+echo "Staging ***ment complete."
+======END======
+out: Your branch is up to date with 'origin/staging'.
+err: Already on 'staging'
+out: HEAD is now at 2c267cc Update *** staging
+2026/02/27 16:07:22 Process exited with status 1
+##[debug]Docker Action run completed with exit code 1
