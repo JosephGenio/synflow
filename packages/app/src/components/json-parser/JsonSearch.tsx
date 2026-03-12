@@ -6,19 +6,20 @@ interface JsonSearchProps {
   query: string
   onQueryChange: (query: string) => void
   onSelectMatch: (path: string, key: string, value: string, matchType: 'key' | 'value') => void
+  debounceMs?: number
 }
 
-export default function JsonSearch({ matches, query, onQueryChange, onSelectMatch }: JsonSearchProps): React.ReactElement {
+export default function JsonSearch({ matches, query, onQueryChange, onSelectMatch, debounceMs = 200 }: JsonSearchProps): React.ReactElement {
   const [localQuery, setLocalQuery] = useState(query)
-  const [expanded, setExpanded] = useState(false)
+  const [expanded, setExpanded] = useState(!!query)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     const timer = setTimeout(() => {
       onQueryChange(localQuery)
-    }, 200)
+    }, debounceMs)
     return () => clearTimeout(timer)
-  }, [localQuery, onQueryChange])
+  }, [localQuery, onQueryChange, debounceMs])
 
   function handleExpand(): void {
     setExpanded(true)

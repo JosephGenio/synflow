@@ -1,5 +1,7 @@
 import type { JsonNode, JsonStats, JsonValidationResult, SearchMatch } from './types'
 
+export const LARGE_INPUT_THRESHOLD = 100 * 1024 // 100 KB
+
 export function parseJson(input: string): JsonValidationResult {
   if (!input.trim()) {
     return { valid: false }
