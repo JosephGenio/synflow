@@ -1,0 +1,11 @@
+{
+  "auth": false,
+  "tools": {
+    "jsonParser": true,
+    "diffChecker": false,
+    "encoderDecoder": false,
+    "burnerEmail": false,
+    "passwordGenerator": false,
+    "regexTester": false
+  }
+}

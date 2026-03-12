@@ -1,0 +1,12 @@
+-- UP
+CREATE TABLE IF NOT EXISTS "User" (
+  "KeyUser" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  "First" VARCHAR(50) NOT NULL,
+  "Middle" VARCHAR(50) NOT NULL,
+  "Last" VARCHAR(50) NOT NULL,
+  "Email" VARCHAR(100) NOT NULL UNIQUE,
+  "ContactNumber" VARCHAR(13)
+);
+
+-- DOWN
+DROP TABLE IF EXISTS "User" CASCADE;

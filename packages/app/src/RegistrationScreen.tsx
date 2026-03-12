@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTheme } from './ThemeContext'
 import { isValidEmail } from './utils/validation'
+import PasswordField from './components/PasswordField'
 
 interface RegistrationScreenProps {
   onRegister: () => void
@@ -14,6 +15,8 @@ interface RegistrationFormData {
   lastName: string
   email: string
   contactNumber: string
+  password: string
+  confirmPassword: string
 }
 
 const inputClass = 'w-full px-3.5 py-2.5 rounded-lg border text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors'
@@ -26,10 +29,13 @@ export default function RegistrationScreen({ onRegister, onBackToLogin }: Regist
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<RegistrationFormData>({
     defaultValues: { contactNumber: '+63' },
   })
+
+  const passwordValue = watch('password', '')
 
   const onSubmit = async (data: RegistrationFormData): Promise<void> => {
     setApiError(null)
@@ -100,7 +106,7 @@ export default function RegistrationScreen({ onRegister, onBackToLogin }: Regist
                 <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
               </svg>
             </div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">synflow</h1>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">synflo</h1>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Create your account</p>
           </div>
 
@@ -202,6 +208,44 @@ export default function RegistrationScreen({ onRegister, onBackToLogin }: Regist
                 </div>
               </div>
 
+              {/* Password Section */}
+              <div>
+                <h2 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">Password</h2>
+                <div className="space-y-5 lg:space-y-4">
+                  {/* Password */}
+                  <PasswordField
+                    label="Password"
+                    placeholder="Create a password"
+                    register={register('password', {
+                      required: 'Password is required',
+                      minLength: { value: 8, message: 'Password must be at least 8 characters' },
+                      validate: {
+                        uppercase: (v) => /[A-Z]/.test(v) || 'Must contain at least one uppercase letter',
+                        lowercase: (v) => /[a-z]/.test(v) || 'Must contain at least one lowercase letter',
+                        number: (v) => /\d/.test(v) || 'Must contain at least one number',
+                        special: (v) => /[^A-Za-z0-9]/.test(v) || 'Must contain at least one special character',
+                      },
+                    })}
+                    error={errors.password}
+                    showStrength
+                    passwordValue={passwordValue}
+                    autoComplete="new-password"
+                  />
+
+                  {/* Confirm Password */}
+                  <PasswordField
+                    label="Confirm Password"
+                    placeholder="Confirm your password"
+                    register={register('confirmPassword', {
+                      required: 'Please confirm your password',
+                      validate: (value) => value === watch('password') || 'Passwords do not match',
+                    })}
+                    error={errors.confirmPassword}
+                    autoComplete="new-password"
+                  />
+                </div>
+              </div>
+
               {/* API Error */}
               {apiError && (
                 <div className="rounded-lg bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 p-3 text-sm text-red-700 dark:text-red-400">
@@ -238,7 +282,7 @@ export default function RegistrationScreen({ onRegister, onBackToLogin }: Regist
       <footer className="py-6 px-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 transition-colors duration-200">
         <div className="max-w-md lg:max-w-2xl mx-auto flex flex-col items-center gap-1 text-center">
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            &copy; {new Date().getFullYear()} Synflow. All rights reserved.
+            &copy; {new Date().getFullYear()} Synflo. All rights reserved.
           </p>
           <p className="text-xs text-gray-400 dark:text-gray-500">
             Built with React &amp; TypeScript &mdash; v0.1.0

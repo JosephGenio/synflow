@@ -14,6 +14,8 @@
 		"start:server": "pnpm --filter @synflow/server start",
 		"test": "pnpm -r test",
 		"health-check": "pnpm test && pnpm eslint . --max-warnings=0",
+		"migrate": "pnpm --filter @synflow/server migrate",
+		"migrate:rollback": "pnpm --filter @synflow/server migrate:rollback",
 		"db:up": "docker compose up -d",
 		"db:down": "docker compose down",
 		"db:reset": "docker compose down -v && docker compose up -d",
@@ -30,6 +32,8 @@
 		"typescript-eslint": "^8.0.0"
 	},
 	"dependencies": {
-		"act": "^0.0.6"
+		"@vercel/analytics": "^2.0.0",
+		"act": "^0.0.6",
+		"pnpm": "^10.30.2"
 	}
 }

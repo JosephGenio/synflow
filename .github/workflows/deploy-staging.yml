@@ -1,0 +1,92 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches:
+      - staging
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: staging
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Deploy to Oracle Cloud VM via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.STAGING_VM_HOST }}
+          username: ${{ secrets.STAGING_VM_USER }}
+          key: ${{ secrets.STAGING_VM_SSH_KEY }}
+          port: 22
+          script_stop: true
+          script: |
+            set -e
+
+            # Navigate to the project directory
+            cd ~/synflow
+
+            # Pull latest code from staging branch
+            git fetch origin
+            git checkout staging
+            git reset --hard origin/staging
+
+            # Write the staging env file from the secret
+            sudo rm -rf env
+            mkdir -p env
+            cat <<'ENVEOF' | sed 's/^[[:space:]]*//' > env/.env.staging
+            ${{ secrets.STAGING_ENV_FILE }}
+            ENVEOF
+
+            # Rebuild containers (--env-file handles compose-file variable interpolation)
+            docker compose -f docker-compose.staging.yml --env-file env/.env.staging up -d --build
+
+            # Wait for backend healthcheck to pass (max 60s)
+            echo "Waiting for backend to become healthy..."
+            for i in $(seq 1 12); do
+              STATUS=$(docker inspect --format='{{.State.Health.Status}}' synflow-backend-staging 2>/dev/null || echo "missing")
+              if [ "$STATUS" = "healthy" ]; then
+                echo "Backend is healthy."
+                break
+              fi
+              if [ "$i" = "12" ]; then
+                echo "Backend did not become healthy in time."
+                docker logs synflow-backend-staging --tail 50
+                exit 1
+              fi
+              echo "  attempt $i/12 — status: $STATUS — waiting 5s..."
+              sleep 5
+            done
+
+            echo "Staging deployment complete."
+
+      - name: Bump server version after successful deploy
+        run: |
+          # Read current version
+          CURRENT=$(node -p "require('./packages/server/package.json').version")
+          echo "Current version: $CURRENT"
+
+          # Increment patch version
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
+          NEW_VERSION="$MAJOR.$MINOR.$((PATCH + 1))"
+          echo "New version: $NEW_VERSION"
+
+          # Update packages/server/package.json
+          node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('packages/server/package.json', 'utf-8'));
+            pkg.version = '$NEW_VERSION';
+            fs.writeFileSync('packages/server/package.json', JSON.stringify(pkg, null, 2) + '\n');
+          "
+
+          # Commit and push
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add packages/server/package.json
+          git commit -m "chore: bump server version to $NEW_VERSION [skip ci]"
+          git push origin staging

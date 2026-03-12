@@ -1,21 +1,28 @@
 services:
-  mssql:
-    image: mcr.microsoft.com/mssql/server:2022-latest
-    container_name: synflow-mssql
-    ports:
-      - "1433:1433"
+  postgres:
+    image: postgres:16-alpine
+    container_name: synflow-postgres-staging
     environment:
-      ACCEPT_EULA: "Y"
-      MSSQL_SA_PASSWORD: "${DB_PASSWORD:-YourStrong!Passw0rd}"
-      MSSQL_PID: Developer
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-synflow}
+    ports:
+      - "5433:5432"
     volumes:
-      - mssql-data:/var/opt/mssql
+      - postgres-dev-data:/var/lib/postgresql/data
+    networks:
+      - synflow-dev-network
     healthcheck:
-      test: /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$${MSSQL_SA_PASSWORD}" -Q "SELECT 1" -C -b
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-synflow}"]
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 30s
+      start_period: 10s
+    restart: unless-stopped
 
 volumes:
-  mssql-data:
+  postgres-dev-data:
+
+networks:
+  synflow-dev-network:
+    driver: bridge

@@ -1,101 +1,57 @@
-import sql from 'mssql'
+import { Pool } from 'pg'
 import dotenv from 'dotenv'
+import path from 'path'
 
-dotenv.config({ path: '../../.env' })
-
-const config: sql.config = {
-  server: process.env.DB_HOST ?? 'localhost',
-  port: Number(process.env.DB_PORT ?? 1433),
-  user: process.env.DB_USER ?? 'sa',
-  password: process.env.DB_PASSWORD ?? 'YourStrong!Passw0rd',
-  database: process.env.DB_NAME ?? 'synflow',
-  options: {
-    encrypt: false,
-    trustServerCertificate: true,
-  },
+// Resolve .env path correctly for both development (src) and production (dist)
+const envPath = path.resolve(path.join(__dirname, '..', '..', '..'), '.env')
+const result = dotenv.config({ path: envPath })
+if (result.error && process.env.NODE_ENV !== 'production') {
+  console.warn(`Warning: Could not load .env file from ${envPath}`)
 }
 
-let pool: sql.ConnectionPool | null = null
+const dbName = process.env.DB_NAME ?? 'synflow'
 
-export async function getPool(): Promise<sql.ConnectionPool> {
+const config = {
+  host: process.env.DB_HOST ?? 'localhost',
+  port: Number(process.env.DB_PORT ?? 5432),
+  user: process.env.DB_USER ?? 'postgres',
+  password: process.env.DB_PASSWORD ?? 'postgres',
+  database: dbName,
+  connectionTimeoutMillis: 5000,
+  query_timeout: 10000,
+  idle_in_transaction_session_timeout: 30000,
+}
+
+let pool: Pool | null = null
+
+export async function getPool(): Promise<Pool> {
   if (pool) return pool
 
-  // First connect to master to ensure our database exists
-  const masterPool = await new sql.ConnectionPool({
-    ...config,
-    database: 'master',
-  }).connect()
+  console.log(`Connecting to PostgreSQL at ${config.host}:${config.port}/${config.database}`)
+  pool = new Pool(config)
 
-  const dbName = config.database ?? 'synflow'
-  await masterPool.request().query(
-    `IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = '${dbName}')
-     CREATE DATABASE [${dbName}]`
-  )
-  await masterPool.close()
-
-  // Now connect to the target database
-  pool = await new sql.ConnectionPool(config).connect()
-
-  // Ensure verification columns exist on UserRegistration
-  await pool.request().query(`
-    IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('UserRegistration') AND name = 'VerificationToken')
-      ALTER TABLE [UserRegistration] ADD VerificationToken UNIQUEIDENTIFIER DEFAULT NEWID()
-  `)
-  await pool.request().query(`
-    IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('UserRegistration') AND name = 'IsVerified')
-      ALTER TABLE [UserRegistration] ADD IsVerified BIT DEFAULT 0
-  `)
-  await pool.request().query(`
-    IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('UserRegistration') AND name = 'PasswordHash')
-      ALTER TABLE [UserRegistration] ADD PasswordHash NVARCHAR(255) NULL
-  `)
-  await pool.request().query(`
-    IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('UserRegistration') AND name = 'TokenExpiresAt')
-      ALTER TABLE [UserRegistration] ADD TokenExpiresAt DATETIME2 NULL
-  `)
-
-  // Ensure permanent User and UserSecurity tables exist
-  await pool.request().query(`
-    IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'User')
-    CREATE TABLE [User] (
-      KeyUser UNIQUEIDENTIFIER DEFAULT NEWID() PRIMARY KEY,
-      [First] VARCHAR(50) NOT NULL,
-      [Middle] VARCHAR(50) NOT NULL,
-      [Last] VARCHAR(50) NOT NULL,
-      Email VARCHAR(100) NOT NULL UNIQUE,
-      ContactNumber NVARCHAR(13) NULL
-    )
-  `)
-  await pool.request().query(`
-    IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'UserSecurity')
-    CREATE TABLE [UserSecurity] (
-      KeyUserSecurity UNIQUEIDENTIFIER DEFAULT NEWID() PRIMARY KEY,
-      KeyUser UNIQUEIDENTIFIER NOT NULL REFERENCES [User](KeyUser),
-      UserName VARCHAR(50) NOT NULL,
-      Password TEXT NOT NULL,
-      DtCreated DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
-      LastLogin DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET()
-    )
-  `)
-
-  // Ensure PasswordReset table exists
-  await pool.request().query(`
-    IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'PasswordReset')
-    CREATE TABLE [PasswordReset] (
-      KeyPasswordReset UNIQUEIDENTIFIER DEFAULT NEWID() PRIMARY KEY,
-      KeyUser UNIQUEIDENTIFIER NOT NULL REFERENCES [User](KeyUser),
-      ResetToken UNIQUEIDENTIFIER DEFAULT NEWID(),
-      TokenExpiresAt DATETIME2 NOT NULL,
-      IsUsed BIT DEFAULT 0
-    )
-  `)
+  // Test connection with timeout
+  try {
+    const client = await pool.connect()
+    try {
+      await client.query('SELECT NOW()')
+      console.log('PostgreSQL connection test successful')
+    } finally {
+      client.release()
+    }
+  } catch (err) {
+    pool = null
+    const message = err instanceof Error ? err.message : String(err)
+    console.error(`PostgreSQL connection failed: ${message}`)
+    throw err
+  }
 
   return pool
 }
 
 export async function closePool(): Promise<void> {
   if (pool) {
-    await pool.close()
+    await pool.end()
     pool = null
   }
 }

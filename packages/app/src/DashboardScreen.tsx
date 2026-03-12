@@ -120,7 +120,7 @@ export default function DashboardScreen({ user, onLogout }: DashboardScreenProps
               <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
             </svg>
           </div>
-          <span className="text-base font-bold text-gray-900 dark:text-white tracking-tight">synflow</span>
+          <span className="text-base font-bold text-gray-900 dark:text-white tracking-tight">synflo</span>
         </div>
 
         {/* Nav */}
@@ -300,7 +300,7 @@ export default function DashboardScreen({ user, onLogout }: DashboardScreenProps
           <footer className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 transition-colors duration-200">
             <div className="flex items-center justify-between">
               <p className="text-xs text-gray-400 dark:text-gray-500">
-                &copy; {new Date().getFullYear()} Synflow. All rights reserved.
+                &copy; {new Date().getFullYear()} Synflo. All rights reserved.
               </p>
               <p className="text-xs text-gray-400 dark:text-gray-500">v0.1.0</p>
             </div>

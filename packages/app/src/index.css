@@ -1,2 +1,131 @@
 @import "tailwindcss";
 @custom-variant dark (&:where(.dark, .dark *));
+
+/* ── Theme Tokens ── */
+@theme {
+  /* Primary accent */
+  --color-accent-red: #ef233c;
+  --color-accent-red-glow: rgba(239, 35, 60, 0.5);
+
+  /* Category accents (used for tool cards & feature highlights) */
+  --color-accent-amber: #f59e0b;
+  --color-accent-cyan: #06b6d4;
+  --color-accent-purple: #a855f7;
+  --color-accent-green: #22c55e;
+  --color-accent-blue: #3b82f6;
+
+  /* Noir surfaces */
+  --color-noir-bg: #000000;
+  --color-noir-surface: #0a0a0a;
+  --color-noir-surface-dark: #1a0505;
+  --color-noir-card: rgba(255, 255, 255, 0.05);
+  --color-noir-border: rgba(255, 255, 255, 0.1);
+  --color-noir-border-hover: rgba(255, 255, 255, 0.2);
+  --color-noir-grid: rgba(255, 255, 255, 0.03);
+
+  /* Fonts */
+  --font-manrope: "Manrope", sans-serif;
+  --font-inter: "Inter", sans-serif;
+
+  /* Animations */
+  --animate-fade-up: fade-in-up 0.8s ease-out forwards;
+  --animate-star-slow: animStar 50s linear infinite;
+  --animate-star-fast: animStar 80s linear infinite;
+  --animate-border-spin: border-spin 2.5s linear infinite;
+}
+
+/* ── Keyframes ── */
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes border-spin {
+  from { --gradient-angle: 0deg; }
+  to { --gradient-angle: 360deg; }
+}
+
+@keyframes animStar {
+  from { transform: translateY(0px); }
+  to { transform: translateY(-2000px); }
+}
+
+@property --gradient-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+/* ── Reusable Utilities ── */
+
+.shiny-cta {
+  --gradient-angle: 0deg;
+  position: relative;
+  overflow: hidden;
+  border-radius: 9999px;
+  padding: 1rem 2.5rem;
+  background:
+    linear-gradient(var(--color-noir-bg), var(--color-noir-bg)) padding-box,
+    conic-gradient(from var(--gradient-angle), transparent 0%, var(--color-accent-red) 5%, var(--color-accent-red) 15%, var(--color-accent-red) 30%, transparent 40%, transparent 100%) border-box;
+  border: 2px solid transparent;
+  cursor: pointer;
+  isolation: isolate;
+  animation: border-spin 2.5s linear infinite;
+}
+
+.shiny-cta::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 50%, white 0.5px, transparent 0);
+  background-size: 4px 4px;
+  opacity: 0.1;
+  z-index: 0;
+}
+
+.stars-1 {
+  box-shadow:
+    234px 124px #fff, 654px 345px #fff, 876px 12px #fff,
+    1200px 800px #fff, 400px 1500px #fff, 1800px 200px #fff,
+    100px 1000px #fff, 900px 1900px #fff, 500px 600px #fff,
+    1400px 100px #fff, 300px 400px #fff, 1600px 1200px #fff;
+}
+
+.stars-2 {
+  box-shadow:
+    123px 456px #fff, 789px 234px #fff, 456px 890px #fff,
+    1100px 300px #fff, 200px 1200px #fff, 1500px 500px #fff,
+    600px 1700px #fff, 1300px 900px #fff;
+}
+
+.gradient-blur {
+  position: fixed;
+  z-index: 40;
+  inset: 0 0 auto 0;
+  height: 120px;
+  pointer-events: none;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.8), transparent);
+  backdrop-filter: blur(8px);
+  mask-image: linear-gradient(to bottom, black, transparent);
+}
+
+.selection-red::selection {
+  background: var(--color-accent-red);
+  color: white;
+}
+
+.text-stroke {
+  -webkit-text-stroke: 1px var(--color-noir-border);
+  color: transparent;
+}
+
+.glass-card {
+  background: var(--color-noir-grid);
+  border: 1px solid var(--color-noir-border);
+  backdrop-filter: blur(12px);
+  transition: border-color 0.3s;
+}
+
+.glass-card:hover {
+  border-color: var(--color-noir-border-hover);
+}

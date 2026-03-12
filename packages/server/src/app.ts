@@ -1,4 +1,4 @@
-import express, { Request, Response, NextFunction } from 'express'
+import express, { Request, Response, NextFunction, Application } from 'express'
 import cors from 'cors'
 import cookieParser from 'cookie-parser'
 import bcrypt from 'bcrypt'
@@ -90,10 +90,11 @@ function authenticateToken(req: Request, res: Response, next: NextFunction): voi
     next()
   } catch {
     res.status(401).json({ ok: false, error: 'Invalid or expired token' })
+    return
   }
 }
 
-const app = express()
+const app: Application = express()
 app.use(cors({
   origin: process.env.APP_URL ?? 'http://localhost:3000',
   credentials: true,
@@ -105,14 +106,14 @@ app.get('/api/ping', (_req, res) => {
   res.json({ ok: true, time: new Date().toISOString() })
 })
 
-app.get('/api/db-health', async (_req, res) => {
+app.get('/api/health', async (_req, res) => {
   try {
     const pool = await getPool()
-    const result = await pool.request().query('SELECT TOP 1 KeyUser FROM [User]')
-    res.json({ ok: true, result: result.recordset })
+    await pool.query('SELECT NOW()')
+    res.json({ status: 'ok', timestamp: new Date().toISOString() })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
-    res.status(503).json({ ok: false, error: message })
+    res.status(503).json({ status: 'error', message })
   }
 })
 
@@ -127,24 +128,16 @@ app.post('/api/register', async (req: Request, res: Response) => {
 
   try {
     const pool = await getPool()
-    await pool.request()
-      .input('firstName', body.firstName.trim())
-      .input('middleName', body.middleName.trim())
-      .input('lastName', body.lastName.trim())
-      .input('email', body.email.trim())
-      .input('contactNumber', body.contactNumber.trim())
-      .query(`
-        INSERT INTO [UserRegistration] (FirstName, MiddleName, LastName, Email, ContactNumber, TokenExpiresAt)
-        VALUES (@firstName, @middleName, @lastName, @email, @contactNumber, DATEADD(HOUR, 1, GETDATE()))
-      `)
+    const result = await pool.query(
+      `INSERT INTO "UserRegistration" ("First", "Middle", "Last", "Email", "ContactNumber", "TokenExpiresAt")
+       VALUES ($1, $2, $3, $4, $5, NOW() + INTERVAL '1 hour')
+       RETURNING "VerificationToken"`,
+      [body.firstName.trim(), body.middleName.trim(), body.lastName.trim(), body.email.trim(), body.contactNumber.trim()]
+    )
 
-    // Retrieve the auto-generated verification token
-    const tokenResult = await pool.request()
-      .input('email', body.email.trim())
-      .query('SELECT VerificationToken FROM [UserRegistration] WHERE Email = @email')
-    const token = tokenResult.recordset[0]?.VerificationToken as string | undefined
+    const token = result.rows[0]?.VerificationToken as string | undefined
 
-    // Send verification email (non-blocking — don't fail registration if email fails)
+    // Send verification email (non-blocking)
     if (token) {
       sendVerificationEmail(body.email.trim(), body.firstName.trim(), token).catch((err) => {
         console.error('Failed to send verification email:', err)
@@ -153,8 +146,9 @@ app.post('/api/register', async (req: Request, res: Response) => {
 
     res.status(201).json({ ok: true })
   } catch (err: unknown) {
-    const sqlErr = err as { number?: number }
-    if (sqlErr.number === 2627 || sqlErr.number === 2601) {
+    const pgErr = err as { code?: string }
+    // PostgreSQL unique constraint violation
+    if (pgErr.code === '23505') {
       res.status(409).json({ ok: false, error: 'Email already registered' })
       return
     }
@@ -173,32 +167,24 @@ app.get('/api/verify-email', async (req: Request, res: Response) => {
 
   try {
     const pool = await getPool()
-    const result = await pool.request()
-      .input('token', token)
-      .query(`
-        UPDATE [UserRegistration]
-        SET IsVerified = 1
-        WHERE VerificationToken = @token AND IsVerified = 0 AND TokenExpiresAt > GETDATE()
-      `)
+    const result = await pool.query(
+      `UPDATE "UserRegistration"
+       SET "IsVerified" = TRUE
+       WHERE "VerificationToken" = $1 AND "IsVerified" = FALSE AND "TokenExpiresAt" > NOW()`,
+      [token]
+    )
 
-    if (result.rowsAffected[0] === 0) {
+    if (result.rowCount === 0) {
       // Check why it failed
-      const existing = await pool.request()
-        .input('token2', token)
-        .query('SELECT IsVerified, PasswordHash, TokenExpiresAt FROM [UserRegistration] WHERE VerificationToken = @token2')
-      const row = existing.recordset[0]
+      const existing = await pool.query(
+        `SELECT "IsVerified", "PasswordHash", "TokenExpiresAt" FROM "UserRegistration" WHERE "VerificationToken" = $1`,
+        [token]
+      )
+      const row = existing.rows[0]
 
       if (!row) {
-        // Token doesn't exist — may have already been moved to User table
-        const userExists = await pool.request()
-          .input('token3', token)
-          .query('SELECT 1 as found FROM [User] u JOIN [UserSecurity] us ON u.KeyUser = us.KeyUser WHERE us.Username IS NOT NULL AND EXISTS (SELECT 1)')
-        if (userExists.recordset.length > 0) {
-          const appUrl = process.env.APP_URL ?? 'http://localhost:3000'
-          res.redirect(`${appUrl}/?status=already-verified`)
-          return
-        }
-        res.status(400).json({ ok: false, error: 'Invalid verification token' })
+        const appUrl = process.env.APP_URL ?? 'http://localhost:3000'
+        res.redirect(`${appUrl}/?status=already-verified`)
         return
       }
 
@@ -214,7 +200,6 @@ app.get('/api/verify-email', async (req: Request, res: Response) => {
       }
 
       if (row.IsVerified) {
-        // Already verified but no password yet — redirect to set password
         const appUrl = process.env.APP_URL ?? 'http://localhost:3000'
         res.redirect(`${appUrl}/?view=set-password&token=${token}`)
         return
@@ -240,7 +225,6 @@ app.post('/api/set-password', async (req: Request, res: Response) => {
     return
   }
 
-  // Password strength validation
   const passwordErrors: string[] = []
   if (password.length < 8) {
     passwordErrors.push('Password must be at least 8 characters')
@@ -266,69 +250,58 @@ app.post('/api/set-password', async (req: Request, res: Response) => {
   try {
     const pool = await getPool()
 
-    // Verify the token exists and user is verified but has no password yet
-    const regResult = await pool.request()
-      .input('token', token)
-      .query(`
-        SELECT FirstName, MiddleName, LastName, Email, ContactNumber
-        FROM [UserRegistration]
-        WHERE VerificationToken = @token AND IsVerified = 1 AND PasswordHash IS NULL
-      `)
+    const regResult = await pool.query(
+      `SELECT "First", "Middle", "Last", "Email", "ContactNumber"
+       FROM "UserRegistration"
+       WHERE "VerificationToken" = $1 AND "IsVerified" = TRUE AND "PasswordHash" IS NULL`,
+      [token]
+    )
 
-    if (regResult.recordset.length === 0) {
+    if (regResult.rows.length === 0) {
       res.status(400).json({ ok: false, error: 'Invalid token or password already set' })
       return
     }
 
-    const reg = regResult.recordset[0]
+    const reg = regResult.rows[0]
     const hash = await bcrypt.hash(password, 12)
 
-    // Move to User + UserSecurity in a transaction
-    const transaction = pool.transaction()
-    await transaction.begin()
-
+    // Use transaction
+    const client = await pool.connect()
     try {
-      // Insert into User and get the new KeyUser
-      const userInsert = await transaction.request()
-        .input('first', reg.FirstName)
-        .input('middle', reg.MiddleName)
-        .input('last', reg.LastName)
-        .input('email', reg.Email)
-        .input('contactNumber', reg.ContactNumber)
-        .query(`
-          INSERT INTO [User] ([First], [Middle], [Last], Email, ContactNumber)
-          OUTPUT INSERTED.KeyUser
-          VALUES (@first, @middle, @last, @email, @contactNumber)
-        `)
+      await client.query('BEGIN')
 
-      const keyUser = userInsert.recordset[0].KeyUser as string
+      const userInsert = await client.query(
+        `INSERT INTO "User" ("First", "Middle", "Last", "Email", "ContactNumber")
+         VALUES ($1, $2, $3, $4, $5)
+         RETURNING "KeyUser"`,
+        [reg.First, reg.Middle, reg.Last, reg.Email, reg.ContactNumber]
+      )
 
-      // Insert into UserSecurity
-      await transaction.request()
-        .input('keyUser', keyUser)
-        .input('username', reg.Email)
-        .input('password', hash)
-        .query(`
-          INSERT INTO [UserSecurity] (KeyUser, UserName, Password, DtCreated, LastLogin)
-          VALUES (@keyUser, @username, @password, SYSDATETIMEOFFSET(), SYSDATETIMEOFFSET())
-        `)
+      const keyUser = userInsert.rows[0].KeyUser as string
 
-      // Delete the staging registration record
-      await transaction.request()
-        .input('token', token)
-        .query('DELETE FROM [UserRegistration] WHERE VerificationToken = @token')
+      await client.query(
+        `INSERT INTO "UserSecurity" ("KeyUser", "UserName", "Password", "DtCreated", "LastLogin")
+         VALUES ($1, $2, $3, NOW(), NOW())`,
+        [keyUser, reg.Email, hash]
+      )
 
-      await transaction.commit()
+      await client.query(
+        `DELETE FROM "UserRegistration" WHERE "VerificationToken" = $1`,
+        [token]
+      )
 
-      // Send confirmation email (non-blocking)
-      sendAccountCreatedEmail(reg.Email, reg.FirstName).catch((err) => {
+      await client.query('COMMIT')
+
+      sendAccountCreatedEmail(reg.Email, reg.First).catch((err) => {
         console.error('Failed to send account created email:', err)
       })
 
       res.json({ ok: true })
     } catch (txErr) {
-      await transaction.rollback()
+      await client.query('ROLLBACK')
       throw txErr
+    } finally {
+      client.release()
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
@@ -352,34 +325,30 @@ app.post('/api/forgot-password', async (req: Request, res: Response) => {
   try {
     const pool = await getPool()
 
-    // Look up user by email
-    const userResult = await pool.request()
-      .input('email', email.trim())
-      .query('SELECT TOP 1 u.KeyUser, u.[First] FROM [User] u WHERE u.Email = @email')
+    const userResult = await pool.query(
+      `SELECT "KeyUser", "First" FROM "User" WHERE "Email" = $1 LIMIT 1`,
+      [email.trim()]
+    )
 
-    if (userResult.recordset.length > 0) {
-      const user = userResult.recordset[0]
+    if (userResult.rows.length > 0) {
+      const user = userResult.rows[0]
       const keyUser = user.KeyUser as string
       const firstName = user.First as string
 
-      // Create password reset record
-      const insertResult = await pool.request()
-        .input('keyUser', keyUser)
-        .query(`
-          INSERT INTO [PasswordReset] (KeyUser, TokenExpiresAt)
-          OUTPUT INSERTED.ResetToken
-          VALUES (@keyUser, DATEADD(HOUR, 1, GETDATE()))
-        `)
+      const insertResult = await pool.query(
+        `INSERT INTO "PasswordReset" ("KeyUser", "TokenExpiresAt")
+         VALUES ($1, NOW() + INTERVAL '1 hour')
+         RETURNING "ResetToken"`,
+        [keyUser]
+      )
 
-      const resetToken = insertResult.recordset[0].ResetToken as string
+      const resetToken = insertResult.rows[0].ResetToken as string
 
-      // Send reset email (non-blocking)
       sendPasswordResetEmail(email.trim(), firstName, resetToken).catch((err) => {
         console.error('Failed to send password reset email:', err)
       })
     }
 
-    // Always return success to prevent email enumeration
     res.json({ ok: true, message: 'If an account exists with that email, a password reset link has been sent.' })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
@@ -395,7 +364,6 @@ app.post('/api/reset-password', async (req: Request, res: Response) => {
     return
   }
 
-  // Password strength validation (same rules as set-password)
   const passwordErrors: string[] = []
   if (password.length < 8) {
     passwordErrors.push('Password must be at least 8 characters')
@@ -421,32 +389,30 @@ app.post('/api/reset-password', async (req: Request, res: Response) => {
   try {
     const pool = await getPool()
 
-    // Verify the reset token is valid and not expired
-    const resetResult = await pool.request()
-      .input('token', token)
-      .query(`
-        SELECT pr.KeyUser
-        FROM [PasswordReset] pr
-        WHERE pr.ResetToken = @token AND pr.IsUsed = 0 AND pr.TokenExpiresAt > GETDATE()
-      `)
+    const resetResult = await pool.query(
+      `SELECT "KeyUser"
+       FROM "PasswordReset"
+       WHERE "ResetToken" = $1 AND "IsUsed" = FALSE AND "TokenExpiresAt" > NOW()`,
+      [token]
+    )
 
-    if (resetResult.recordset.length === 0) {
+    if (resetResult.rows.length === 0) {
       res.status(400).json({ ok: false, error: 'Invalid or expired reset link. Please request a new one.' })
       return
     }
 
-    const keyUser = resetResult.recordset[0].KeyUser as string
+    const keyUser = resetResult.rows[0].KeyUser as string
     const hash = await bcrypt.hash(password, 12)
 
-    // Update password and mark token as used
-    await pool.request()
-      .input('keyUser', keyUser)
-      .input('hash', hash)
-      .query('UPDATE [UserSecurity] SET Password = @hash WHERE KeyUser = @keyUser')
+    await pool.query(
+      `UPDATE "UserSecurity" SET "Password" = $1 WHERE "KeyUser" = $2`,
+      [hash, keyUser]
+    )
 
-    await pool.request()
-      .input('token2', token)
-      .query('UPDATE [PasswordReset] SET IsUsed = 1 WHERE ResetToken = @token2')
+    await pool.query(
+      `UPDATE "PasswordReset" SET "IsUsed" = TRUE WHERE "ResetToken" = $1`,
+      [token]
+    )
 
     res.json({ ok: true })
   } catch (err) {
@@ -470,16 +436,17 @@ app.post('/api/login', async (req: Request, res: Response) => {
   try {
     const pool = await getPool()
 
-    const secResult = await pool.request()
-      .input('username', username.trim())
-      .query('SELECT TOP 1 KeyUser, Password FROM [UserSecurity] WHERE UserName = @username')
+    const secResult = await pool.query(
+      `SELECT "KeyUser", "Password" FROM "UserSecurity" WHERE "UserName" = $1 LIMIT 1`,
+      [username.trim()]
+    )
 
-    if (secResult.recordset.length === 0) {
+    if (secResult.rows.length === 0) {
       res.status(401).json({ ok: false, error: 'Invalid username or password' })
       return
     }
 
-    const secRow = secResult.recordset[0]
+    const secRow = secResult.rows[0]
     const storedHash = secRow.Password as string
     const keyUser = secRow.KeyUser as string
 
@@ -489,20 +456,22 @@ app.post('/api/login', async (req: Request, res: Response) => {
       return
     }
 
-    const userResult = await pool.request()
-      .input('keyUser', keyUser)
-      .query('SELECT TOP 1 [First], [Last], Email FROM [User] WHERE KeyUser = @keyUser')
+    const userResult = await pool.query(
+      `SELECT "First", "Last", "Email" FROM "User" WHERE "KeyUser" = $1 LIMIT 1`,
+      [keyUser]
+    )
 
-    if (userResult.recordset.length === 0) {
+    if (userResult.rows.length === 0) {
       res.status(500).json({ ok: false, error: 'User record not found' })
       return
     }
 
-    const user = userResult.recordset[0]
+    const user = userResult.rows[0]
 
-    await pool.request()
-      .input('keyUser2', keyUser)
-      .query('UPDATE [UserSecurity] SET LastLogin = SYSDATETIMEOFFSET() WHERE KeyUser = @keyUser2')
+    await pool.query(
+      `UPDATE "UserSecurity" SET "LastLogin" = NOW() WHERE "KeyUser" = $1`,
+      [keyUser]
+    )
 
     const payload: JwtPayload = {
       keyUser,
@@ -516,7 +485,7 @@ app.post('/api/login', async (req: Request, res: Response) => {
     res.cookie('token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      sameSite: 'lax',
       maxAge: 60 * 60 * 1000,
       path: '/',
     })

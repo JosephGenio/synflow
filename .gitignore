@@ -8,3 +8,5 @@ pnpm-lock.yaml
 /.vscode
 .claude/
 .claude/settings.local.json
+/env
+specs/
