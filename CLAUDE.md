@@ -1,8 +1,8 @@
-# Synflow — Claude Code Instructions
+# Synflo — Claude Code Instructions
 
 ## Project Overview
 
-Synflow is a full-stack monorepo using a React + Vite frontend and an Express backend, managed with pnpm workspaces.
+Synflo is a full-stack monorepo using a React + Vite frontend and an Express backend, managed with pnpm workspaces.
 
 **Package manager:** pnpm (always use pnpm, never npm or yarn)
 **Monorepo tool:** pnpm workspaces

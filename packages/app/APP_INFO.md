@@ -1,6 +1,6 @@
 # JSON Parser Tool
 
-An interactive, real-time JSON parser built into the Synflow frontend app. Accessible from the Home screen without authentication.
+An interactive, real-time JSON parser built into the Synflo frontend app. Accessible from the Home screen without authentication.
 
 ---
 
