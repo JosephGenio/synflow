@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { Analytics } from '@vercel/analytics/react'
 import ThemeProvider from './ThemeContext'
 import LoginScreen from './LoginScreen'
 import type { UserInfo } from './LoginScreen'
@@ -26,7 +27,7 @@ const viewToPath: Partial<Record<View, string>> = {
 }
 
 function resolveInitialView(): View {
-  const path = window.location.pathname
+  const path = globalThis.location.pathname
   if (pathToView[path]) return pathToView[path]
   return 'home'
 }
@@ -40,21 +41,21 @@ function AppRoutes() {
   const navigate = useCallback((target: View) => {
     setView(target)
     const targetPath = viewToPath[target]
-    if (targetPath && window.location.pathname !== targetPath) {
-      window.history.pushState({ view: target }, '', targetPath)
-    } else if (!targetPath && window.location.pathname !== '/') {
-      window.history.pushState({ view: target }, '', '/')
+    if (targetPath && globalThis.location.pathname !== targetPath) {
+      globalThis.history.pushState({ view: target }, '', targetPath)
+    } else if (!targetPath && globalThis.location.pathname !== '/') {
+      globalThis.history.pushState({ view: target }, '', '/')
     }
   }, [])
 
   useEffect(() => {
     function handlePopState(): void {
-      const path = window.location.pathname
+      const path = globalThis.location.pathname
       const resolved = pathToView[path] ?? 'home'
       setView(resolved)
     }
-    window.addEventListener('popstate', handlePopState)
-    return () => window.removeEventListener('popstate', handlePopState)
+    globalThis.addEventListener('popstate', handlePopState)
+    return () => globalThis.removeEventListener('popstate', handlePopState)
   }, [])
 
   useEffect(() => {
@@ -63,14 +64,14 @@ function AppRoutes() {
       return
     }
 
-    const params = new URLSearchParams(window.location.search)
+    const params = new URLSearchParams(globalThis.location.search)
     const urlView = params.get('view')
     const token = params.get('token')
 
     if (urlView === 'set-password' && token) {
       setVerifyToken(token)
       setView('set-password')
-      window.history.replaceState({}, '', '/')
+      globalThis.history.replaceState({}, '', '/')
       setIsCheckingAuth(false)
       return
     }
@@ -78,7 +79,7 @@ function AppRoutes() {
     if (urlView === 'reset-password' && token) {
       setVerifyToken(token)
       setView('reset-password')
-      window.history.replaceState({}, '', '/')
+      globalThis.history.replaceState({}, '', '/')
       setIsCheckingAuth(false)
       return
     }
@@ -183,6 +184,7 @@ export default function App() {
   return (
     <ThemeProvider>
       <AppRoutes />
+      <Analytics />
     </ThemeProvider>
   )
 }
