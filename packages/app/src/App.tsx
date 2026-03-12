@@ -40,6 +40,7 @@ function AppRoutes() {
 
   const navigate = useCallback((target: View) => {
     setView(target)
+    window.scrollTo(0, 0)
     const targetPath = viewToPath[target]
     if (targetPath && globalThis.location.pathname !== targetPath) {
       globalThis.history.pushState({ view: target }, '', targetPath)
@@ -53,6 +54,7 @@ function AppRoutes() {
       const path = globalThis.location.pathname
       const resolved = pathToView[path] ?? 'home'
       setView(resolved)
+      window.scrollTo(0, 0)
     }
     globalThis.addEventListener('popstate', handlePopState)
     return () => globalThis.removeEventListener('popstate', handlePopState)

@@ -1,6 +1,7 @@
-import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
+import { useState, useMemo, useCallback, useRef, useEffect, useDeferredValue } from 'react'
 import type { OutputTab } from '../components/json-parser/types'
-import { parseJson, buildTree, computeStats, searchJson, formatJson, minifyJson, buildPathLineMap, findKeyInInput } from '../components/json-parser/utils'
+import { parseJson, buildTree, computeStats, searchJson, formatJson, minifyJson, buildPathLineMap, findKeyInInput, LARGE_INPUT_THRESHOLD } from '../components/json-parser/utils'
+import { useDebouncedValue } from '../components/json-parser/useDebouncedValue'
 import JsonTreeView from '../components/json-parser/JsonTreeView'
 import JsonStatsPanel from '../components/json-parser/JsonStats'
 import JsonSearch from '../components/json-parser/JsonSearch'
@@ -29,6 +30,10 @@ export default function JsonParserScreen({ onHome }: JsonParserScreenProps): Rea
   const fileInputRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
+  const isLargeInput = input.length > LARGE_INPUT_THRESHOLD
+  const debouncedInput = useDebouncedValue(input, isLargeInput ? 300 : 0)
+  const isProcessing = isLargeInput && input !== debouncedInput
+
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent): void {
       if (e.key === 'Escape' && isFullscreen) setIsFullscreen(false)
@@ -37,7 +42,7 @@ export default function JsonParserScreen({ onHome }: JsonParserScreenProps): Rea
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [isFullscreen])
 
-  const validationResult = useMemo(() => parseJson(input), [input])
+  const validationResult = useMemo(() => parseJson(debouncedInput), [debouncedInput])
 
   const tree = useMemo(() => {
     if (!validationResult.valid || validationResult.data === undefined) return null
@@ -46,8 +51,8 @@ export default function JsonParserScreen({ onHome }: JsonParserScreenProps): Rea
 
   const stats = useMemo(() => {
     if (!tree) return null
-    return computeStats(input, tree)
-  }, [input, tree])
+    return computeStats(debouncedInput, tree)
+  }, [debouncedInput, tree])
 
   const searchMatches = useMemo(() => {
     if (!tree || !searchQuery.trim()) return []
@@ -64,10 +69,19 @@ export default function JsonParserScreen({ onHome }: JsonParserScreenProps): Rea
     return minifyJson(validationResult.data)
   }, [validationResult])
 
-  const pathLineMap = useMemo(() => {
-    if (!validationResult.valid || validationResult.data === undefined) return new Map<string, number>()
-    return buildPathLineMap(validationResult.data)
+  const pathLineMapRef = useRef<{ data: unknown; map: Map<string, number> }>({ data: undefined, map: new Map() })
+
+  const getPathLineMap = useCallback((): Map<string, number> => {
+    if (!validationResult.valid || validationResult.data === undefined) return new Map()
+    if (pathLineMapRef.current.data === validationResult.data) return pathLineMapRef.current.map
+    const map = buildPathLineMap(validationResult.data)
+    pathLineMapRef.current = { data: validationResult.data, map }
+    return map
   }, [validationResult])
+
+  const deferredTree = useDeferredValue(tree)
+  const deferredStats = useDeferredValue(stats)
+  const deferredSearchMatches = useDeferredValue(searchMatches)
 
   const handleCopy = useCallback((text: string, label: string) => {
     navigator.clipboard.writeText(text).then(() => {
@@ -126,21 +140,21 @@ export default function JsonParserScreen({ onHome }: JsonParserScreenProps): Rea
     setSelectedPath(path)
     setActiveTab('formatted')
 
-    const line = pathLineMap.get(path)
+    const line = getPathLineMap().get(path)
     setHighlightLine(line)
 
-    const pos = findKeyInInput(input, key, value, matchType)
+    const pos = findKeyInInput(debouncedInput, key, value, matchType)
     if (pos && textareaRef.current) {
       textareaRef.current.focus()
       textareaRef.current.setSelectionRange(pos.start, pos.end)
-      const linesBefore = input.slice(0, pos.start).split('\n').length - 1
+      const linesBefore = debouncedInput.slice(0, pos.start).split('\n').length - 1
       const lineHeight = 20
       textareaRef.current.scrollTop = Math.max(0, linesBefore * lineHeight - textareaRef.current.clientHeight / 2)
       setTimeout(() => {
         textareaRef.current?.blur()
       }, 600)
     }
-  }, [pathLineMap, input])
+  }, [getPathLineMap, debouncedInput])
 
   const actionBtnClass = 'text-xs px-2.5 py-1 rounded-md bg-white/5 border border-noir-border text-zinc-300 hover:bg-white/10 hover:text-white transition-colors'
 
@@ -287,10 +301,18 @@ export default function JsonParserScreen({ onHome }: JsonParserScreenProps): Rea
               </div>
             )}
 
+            {/* Processing indicator for large inputs */}
+            {isProcessing && (
+              <div className="flex items-center gap-2 px-4 py-2 border-t border-noir-border flex-shrink-0">
+                <div className="w-3 h-3 border-2 border-zinc-500 border-t-accent-red rounded-full animate-spin" />
+                <span className="text-xs text-zinc-500">Processing...</span>
+              </div>
+            )}
+
             {/* Stats */}
-            {stats && (
+            {deferredStats && (
               <div className="border-t border-noir-border flex-shrink-0 max-h-48 overflow-y-auto">
-                <JsonStatsPanel stats={stats} />
+                <JsonStatsPanel stats={deferredStats} />
               </div>
             )}
           </div>
@@ -299,13 +321,14 @@ export default function JsonParserScreen({ onHome }: JsonParserScreenProps): Rea
         {/* Right: Output Panel */}
         <div className={`flex flex-col gap-3 min-h-0 ${isFullscreen ? 'hidden' : 'w-full lg:w-1/2'}`}>
           {/* Search */}
-          {tree && (
+          {deferredTree && (
             <div className="flex-shrink-0">
               <JsonSearch
-                matches={searchMatches}
+                matches={deferredSearchMatches}
                 query={searchQuery}
                 onQueryChange={handleSearchQueryChange}
                 onSelectMatch={handleSelectMatch}
+                debounceMs={isLargeInput ? 500 : 200}
               />
             </div>
           )}
@@ -365,14 +388,14 @@ export default function JsonParserScreen({ onHome }: JsonParserScreenProps): Rea
                 <div className="flex items-center justify-center h-full text-zinc-500 text-sm">
                   {input.trim() ? 'Fix JSON errors to see output' : 'Paste JSON to get started'}
                 </div>
-              ) : activeTab === 'tree' && tree ? (
+              ) : activeTab === 'tree' && deferredTree ? (
                 <JsonTreeView
-                  node={tree}
+                  node={deferredTree}
                   searchQuery={searchQuery}
                   onSelectPath={setSelectedPath}
                 />
               ) : activeTab === 'formatted' ? (
-                <SyntaxHighlight json={formatted} highlightLine={highlightLine} />
+                <SyntaxHighlight json={formatted} highlightLine={highlightLine} maxLines={isLargeInput ? 500 : undefined} />
               ) : activeTab === 'minified' ? (
                 <pre className="font-mono text-sm text-zinc-200 whitespace-pre-wrap break-all">
                   {minified}
@@ -470,13 +493,14 @@ export default function JsonParserScreen({ onHome }: JsonParserScreenProps): Rea
             </div>
 
             {/* Search — own row, outside header flex */}
-            {tree && (
+            {deferredTree && (
               <div className="px-5 py-2 border-b border-noir-border flex-shrink-0">
                 <JsonSearch
-                  matches={searchMatches}
+                  matches={deferredSearchMatches}
                   query={searchQuery}
                   onQueryChange={handleSearchQueryChange}
                   onSelectMatch={handleSelectMatch}
+                  debounceMs={isLargeInput ? 500 : 200}
                 />
               </div>
             )}
@@ -502,14 +526,14 @@ export default function JsonParserScreen({ onHome }: JsonParserScreenProps): Rea
                 <div className="flex items-center justify-center h-full text-zinc-500 text-sm">
                   {input.trim() ? 'Fix JSON errors to see output' : 'Paste JSON to get started'}
                 </div>
-              ) : activeTab === 'tree' && tree ? (
+              ) : activeTab === 'tree' && deferredTree ? (
                 <JsonTreeView
-                  node={tree}
+                  node={deferredTree}
                   searchQuery={searchQuery}
                   onSelectPath={setSelectedPath}
                 />
               ) : activeTab === 'formatted' ? (
-                <SyntaxHighlight json={formatted} highlightLine={highlightLine} />
+                <SyntaxHighlight json={formatted} highlightLine={highlightLine} maxLines={isLargeInput ? 500 : undefined} />
               ) : activeTab === 'minified' ? (
                 <pre className="font-mono text-sm text-zinc-200 whitespace-pre-wrap break-all">
                   {minified}

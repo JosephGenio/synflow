@@ -3,6 +3,7 @@ import { useMemo, useEffect, useRef } from 'react'
 interface SyntaxHighlightProps {
   json: string
   highlightLine?: number
+  maxLines?: number
 }
 
 interface Token {
@@ -78,9 +79,11 @@ function groupTokensByLine(tokens: Token[]): Token[][] {
   return lines
 }
 
-export default function SyntaxHighlight({ json, highlightLine }: SyntaxHighlightProps): React.ReactElement {
+export default function SyntaxHighlight({ json, highlightLine, maxLines }: SyntaxHighlightProps): React.ReactElement {
   const tokens = useMemo(() => tokenize(json), [json])
-  const lines = useMemo(() => groupTokensByLine(tokens), [tokens])
+  const allLines = useMemo(() => groupTokensByLine(tokens), [tokens])
+  const isTruncated = maxLines !== undefined && allLines.length > maxLines
+  const lines = isTruncated ? allLines.slice(0, maxLines) : allLines
   const highlightRef = useRef<HTMLSpanElement>(null)
 
   useEffect(() => {
@@ -116,6 +119,11 @@ export default function SyntaxHighlight({ json, highlightLine }: SyntaxHighlight
           )
         })}
       </code>
+      {isTruncated && (
+        <div className="mt-3 py-2 border-t border-noir-border text-xs text-zinc-500 text-center">
+          Showing first {maxLines.toLocaleString()} of {allLines.length.toLocaleString()} lines
+        </div>
+      )}
     </pre>
   )
 }
