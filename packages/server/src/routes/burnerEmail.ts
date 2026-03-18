@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express'
 import crypto from 'crypto'
-import rateLimit from 'express-rate-limit'
+// import rateLimit from 'express-rate-limit'
 import { getPool } from '../db'
 
 const router = Router()
