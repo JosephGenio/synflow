@@ -8,10 +8,11 @@ import { getToolCollections } from './tools/toolsData'
 interface ToolsCollectionScreenProps {
   onHome: () => void
   onJsonParser?: () => void
+  onBurnerEmail?: () => void
 }
 
-export default function ToolsCollectionScreen({ onHome, onJsonParser }: ToolsCollectionScreenProps): React.ReactElement {
-  const collections = getToolCollections({ onJsonParser })
+export default function ToolsCollectionScreen({ onHome, onJsonParser, onBurnerEmail }: ToolsCollectionScreenProps): React.ReactElement {
+  const collections = getToolCollections({ onJsonParser, onBurnerEmail })
 
   return (
     <NoirBackground>

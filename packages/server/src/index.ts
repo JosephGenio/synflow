@@ -1,14 +1,16 @@
 import app from './app'
 import { getPool, closePool } from './db'
 import { runMigrations } from './migrate'
-import { Server } from 'http'
-import { execSync } from 'child_process'
+import { Server } from 'node:http'
+import { execSync } from 'node:child_process'
+import { cleanupExpiredMailboxes } from './cleanup'
 
 const PORT = Number(process.env.PORT ?? 3001)
 const MAX_RETRIES = 15
 const RETRY_DELAY_MS = 2000
 
 let server: Server | null = null
+let cleanupInterval: ReturnType<typeof setInterval> | null = null
 
 function killProcessOnPort(port: number): void {
   try {
@@ -97,11 +99,26 @@ async function start(): Promise<void> {
     process.exit(1)
   }
 
+  // Cleanup expired burner mailboxes every 10 minutes
+  cleanupInterval = setInterval(async () => {
+    try {
+      const count = await cleanupExpiredMailboxes()
+      if (count > 0) console.log(`✓ Cleaned up ${count} expired burner mailbox(es)`)
+    } catch (err) {
+      console.error('Burner mailbox cleanup failed:', err)
+    }
+  }, 10 * 60 * 1000)
+
   listen(0)
 }
 
 async function shutdown(): Promise<void> {
   console.log('\n↓ Shutting down gracefully...')
+
+  if (cleanupInterval) {
+    clearInterval(cleanupInterval)
+    cleanupInterval = null
+  }
 
   if (server) {
     await new Promise<void>((resolve) => {
