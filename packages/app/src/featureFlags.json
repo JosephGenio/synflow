@@ -4,7 +4,7 @@
     "jsonParser": true,
     "diffChecker": false,
     "encoderDecoder": false,
-    "burnerEmail": false,
+    "burnerEmail": true,
     "passwordGenerator": false,
     "regexTester": false
   }

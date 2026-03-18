@@ -79,6 +79,7 @@ interface ToolCollection {
 
 interface ToolHandlers {
   onJsonParser?: () => void
+  onBurnerEmail?: () => void
 }
 
 export function getToolCollections(handlers: ToolHandlers): ToolCollection[] {
@@ -120,6 +121,7 @@ export function getToolCollections(handlers: ToolHandlers): ToolCollection[] {
           title: 'Burner Email',
           description: 'Generate temporary email addresses for sign-up flows, testing, and keeping your inbox clean.',
           accentColor: 'var(--color-accent-purple)',
+          onClick: handlers.onBurnerEmail,
           comingSoon: !featureFlags.tools.burnerEmail,
         },
         {
