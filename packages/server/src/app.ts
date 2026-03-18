@@ -5,6 +5,7 @@ import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
 import { getPool } from './db'
 import { sendVerificationEmail, sendAccountCreatedEmail, sendPasswordResetEmail } from './email'
+import { burnerEmailRouter } from './routes/burnerEmail'
 
 const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$/
 const CONTACT_REGEX = /^\+63\d{10}$/
@@ -101,6 +102,8 @@ app.use(cors({
 }))
 app.use(express.json())
 app.use(cookieParser())
+
+app.use(burnerEmailRouter)
 
 app.get('/api/ping', (_req, res) => {
   res.json({ ok: true, time: new Date().toISOString() })

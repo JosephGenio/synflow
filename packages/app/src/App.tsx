@@ -11,17 +11,20 @@ import ResetPasswordScreen from './ResetPasswordScreen'
 import HomeScreen from './HomeScreen'
 import ToolsCollectionScreen from './ToolsCollectionScreen'
 import JsonParserScreen from './tools/JsonParserScreen'
+import BurnerEmailScreen from './tools/BurnerEmailScreen'
 import featureFlags from './featureFlags'
 
-type View = 'home' | 'login' | 'register' | 'dashboard' | 'set-password' | 'forgot-password' | 'reset-password' | 'json-parser' | 'tools-collection'
+type View = 'home' | 'login' | 'register' | 'dashboard' | 'set-password' | 'forgot-password' | 'reset-password' | 'json-parser' | 'burner-email' | 'tools-collection'
 
 const pathToView: Record<string, View> = {
   '/tools/json-parser': 'json-parser',
+  '/tools/burner-email': 'burner-email',
   '/tools': 'tools-collection',
 }
 
 const viewToPath: Partial<Record<View, string>> = {
   'json-parser': '/tools/json-parser',
+  'burner-email': '/tools/burner-email',
   'tools-collection': '/tools',
   'home': '/',
 }
@@ -86,7 +89,7 @@ function AppRoutes() {
       return
     }
 
-    if (view === 'json-parser') {
+    if (view === 'json-parser' || view === 'burner-email') {
       setIsCheckingAuth(false)
       return
     }
@@ -165,10 +168,15 @@ function AppRoutes() {
     <JsonParserScreen onHome={() => navigate('home')} />
   )
 
+  if (featureFlags.tools.burnerEmail && view === 'burner-email') return (
+    <BurnerEmailScreen onHome={() => navigate('home')} />
+  )
+
   if (view === 'tools-collection') return (
     <ToolsCollectionScreen
       onHome={() => navigate('home')}
       onJsonParser={featureFlags.tools.jsonParser ? () => navigate('json-parser') : undefined}
+      onBurnerEmail={featureFlags.tools.burnerEmail ? () => navigate('burner-email') : undefined}
     />
   )
 
@@ -177,6 +185,7 @@ function AppRoutes() {
       onLogin={featureFlags.auth ? () => navigate('login') : undefined}
       onSignUp={featureFlags.auth ? () => navigate('register') : undefined}
       onJsonParser={featureFlags.tools.jsonParser ? () => navigate('json-parser') : undefined}
+      onBurnerEmail={featureFlags.tools.burnerEmail ? () => navigate('burner-email') : undefined}
       onToolsCollection={() => navigate('tools-collection')}
     />
   )
