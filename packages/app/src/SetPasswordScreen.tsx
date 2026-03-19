@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTheme } from './ThemeContext'
+import { API_URL } from './config'
 import PasswordField from './components/PasswordField'
 
 interface SetPasswordScreenProps {
@@ -29,7 +30,7 @@ export default function SetPasswordScreen({ token, onComplete }: SetPasswordScre
   const onSubmit = async (data: SetPasswordFormData): Promise<void> => {
     setApiError(null)
     try {
-      const res = await fetch('/api/set-password', {
+      const res = await fetch(`${API_URL}/api/set-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token, password: data.password }),

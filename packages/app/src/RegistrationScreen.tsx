@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTheme } from './ThemeContext'
+import { API_URL } from './config'
 import { isValidEmail } from './utils/validation'
 import PasswordField from './components/PasswordField'
 
@@ -40,7 +41,7 @@ export default function RegistrationScreen({ onRegister, onBackToLogin }: Regist
   const onSubmit = async (data: RegistrationFormData): Promise<void> => {
     setApiError(null)
     try {
-      const res = await fetch('/api/register', {
+      const res = await fetch(`${API_URL}/api/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),

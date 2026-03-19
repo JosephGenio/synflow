@@ -1,5 +1,6 @@
 import React from 'react'
 import type { UserInfo } from './LoginScreen'
+import { API_URL } from './config'
 
 interface ProfilePanelProps {
   user: UserInfo
@@ -47,7 +48,7 @@ export default function ProfilePanel({ user, onLogout }: ProfilePanelProps): Rea
   const fullName = `${user.firstName} ${user.lastName}`
 
   const handleSignOut = async (): Promise<void> => {
-    await fetch('/api/logout', { method: 'POST', credentials: 'include' })
+    await fetch(`${API_URL}/api/logout`, { method: 'POST', credentials: 'include' })
     onLogout()
   }
   return (

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTheme } from './ThemeContext'
+import { API_URL } from './config'
 import PasswordField from './components/PasswordField'
 
 export interface UserInfo {
@@ -37,7 +38,7 @@ export default function LoginScreen({ onLogin, onSignUp, onForgotPassword }: Log
   const onSubmit = async (data: LoginFormData): Promise<void> => {
     setApiError(null)
     try {
-      const res = await fetch('/api/login', {
+      const res = await fetch(`${API_URL}/api/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

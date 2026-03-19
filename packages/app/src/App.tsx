@@ -8,6 +8,7 @@ import RegistrationScreen from './RegistrationScreen'
 import SetPasswordScreen from './SetPasswordScreen'
 import ForgotPasswordScreen from './ForgotPasswordScreen'
 import ResetPasswordScreen from './ResetPasswordScreen'
+import { API_URL } from './config'
 import HomeScreen from './HomeScreen'
 import ToolsCollectionScreen from './ToolsCollectionScreen'
 import JsonParserScreen from './tools/JsonParserScreen'
@@ -94,7 +95,7 @@ function AppRoutes() {
       return
     }
 
-    fetch('/api/me', { credentials: 'include' })
+    fetch(`${API_URL}/api/me`, { credentials: 'include' })
       .then((res) => {
         if (res.ok) return res.json()
         throw new Error('Not authenticated')

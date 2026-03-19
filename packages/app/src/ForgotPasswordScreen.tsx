@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTheme } from './ThemeContext'
+import { API_URL } from './config'
 
 interface ForgotPasswordScreenProps {
   onBackToLogin: () => void
@@ -30,7 +31,7 @@ export default function ForgotPasswordScreen({ onBackToLogin }: ForgotPasswordSc
   const onSubmit = async (data: ForgotPasswordFormData): Promise<void> => {
     setApiError(null)
     try {
-      const res = await fetch('/api/forgot-password', {
+      const res = await fetch(`${API_URL}/api/forgot-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: data.email }),

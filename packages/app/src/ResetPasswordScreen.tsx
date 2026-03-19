@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTheme } from './ThemeContext'
+import { API_URL } from './config'
 import PasswordField from './components/PasswordField'
 
 interface ResetPasswordScreenProps {
@@ -29,7 +30,7 @@ export default function ResetPasswordScreen({ token, onComplete }: ResetPassword
   const onSubmit = async (data: ResetPasswordFormData): Promise<void> => {
     setApiError(null)
     try {
-      const res = await fetch('/api/reset-password', {
+      const res = await fetch(`${API_URL}/api/reset-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token, password: data.password }),

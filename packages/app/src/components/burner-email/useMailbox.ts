@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { API_URL } from '../../config'
 
-const API_BASE = '/api/burner'
+const API_BASE = `${API_URL}/api/burner`
 const POLL_INTERVAL_MS = 5000
 const SESSION_STORAGE_KEY = 'burner-mailbox-session'
 
