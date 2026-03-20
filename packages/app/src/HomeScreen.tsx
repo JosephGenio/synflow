@@ -9,12 +9,14 @@ import { getToolCollections } from './tools/toolsData'
 interface HomeScreenProps {
   onLogin?: () => void
   onSignUp?: () => void
+  onAbout?: () => void
+  onContact?: () => void
   onJsonParser?: () => void
   onBurnerEmail?: () => void
   onToolsCollection?: () => void
 }
 
-export default function HomeScreen({ onLogin, onSignUp, onJsonParser, onBurnerEmail, onToolsCollection }: HomeScreenProps): React.ReactElement {
+export default function HomeScreen({ onLogin, onSignUp, onAbout, onContact, onJsonParser, onBurnerEmail, onToolsCollection }: HomeScreenProps): React.ReactElement {
   const collections = getToolCollections({ onJsonParser, onBurnerEmail })
 
   return (
@@ -24,8 +26,8 @@ export default function HomeScreen({ onLogin, onSignUp, onJsonParser, onBurnerEm
         onSignUp={onSignUp}
         links={[
           ...(onToolsCollection ? [{ label: 'Tools', onClick: onToolsCollection }] : []),
-          { label: 'About', onClick: () => {} },
-          { label: 'Contact', onClick: () => {} },
+          ...(onAbout ? [{ label: 'About', onClick: onAbout }] : []),
+          ...(onContact ? [{ label: 'Contact', onClick: onContact }] : []),
         ]}
       />
 

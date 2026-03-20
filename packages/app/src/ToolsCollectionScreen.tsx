@@ -7,20 +7,26 @@ import { getToolCollections } from './tools/toolsData'
 
 interface ToolsCollectionScreenProps {
   onHome: () => void
+  onLogin?: () => void
+  onSignUp?: () => void
+  onAbout?: () => void
+  onContact?: () => void
   onJsonParser?: () => void
   onBurnerEmail?: () => void
 }
 
-export default function ToolsCollectionScreen({ onHome, onJsonParser, onBurnerEmail }: ToolsCollectionScreenProps): React.ReactElement {
+export default function ToolsCollectionScreen({ onHome, onLogin, onSignUp, onAbout, onContact, onJsonParser, onBurnerEmail }: ToolsCollectionScreenProps): React.ReactElement {
   const collections = getToolCollections({ onJsonParser, onBurnerEmail })
 
   return (
     <NoirBackground>
       <GlassNavbar
+        onLogin={onLogin}
+        onSignUp={onSignUp}
         onBrandClick={onHome}
         links={[
-          { label: 'About', onClick: () => {} },
-          { label: 'Contact', onClick: () => {} },
+          ...(onAbout ? [{ label: 'About', onClick: onAbout }] : []),
+          ...(onContact ? [{ label: 'Contact', onClick: onContact }] : []),
         ]}
       />
 

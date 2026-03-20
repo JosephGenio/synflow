@@ -6,6 +6,7 @@
     "encoderDecoder": false,
     "burnerEmail": false,
     "passwordGenerator": false,
-    "regexTester": false
+    "regexTester": false,
+    "imageOptimizer": false
   }
 }

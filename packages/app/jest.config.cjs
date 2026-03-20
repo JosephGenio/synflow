@@ -16,6 +16,8 @@ module.exports = {
   testMatch: ['**/__tests__/**/*.test.{ts,tsx}', '**/*.test.{ts,tsx}'],
   moduleNameMapper: {
     '^@vercel/analytics/react$': '<rootDir>/src/__mocks__/@vercel/analytics.ts',
+    '^./config$': '<rootDir>/src/__mocks__/config.ts',
     '^@synflow/(.*)$': '<rootDir>/../../packages/$1/src',
   },
+  moduleDirectories: ['node_modules', '<rootDir>/../../node_modules'],
 };

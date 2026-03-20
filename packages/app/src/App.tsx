@@ -13,20 +13,26 @@ import HomeScreen from './HomeScreen'
 import ToolsCollectionScreen from './ToolsCollectionScreen'
 import JsonParserScreen from './tools/JsonParserScreen'
 import BurnerEmailScreen from './tools/BurnerEmailScreen'
+import AboutScreen from './AboutScreen'
+import ContactScreen from './ContactScreen'
 import featureFlags from './featureFlags'
 
-type View = 'home' | 'login' | 'register' | 'dashboard' | 'set-password' | 'forgot-password' | 'reset-password' | 'json-parser' | 'burner-email' | 'tools-collection'
+type View = 'home' | 'login' | 'register' | 'dashboard' | 'set-password' | 'forgot-password' | 'reset-password' | 'json-parser' | 'burner-email' | 'tools-collection' | 'about' | 'contact'
 
 const pathToView: Record<string, View> = {
   '/tools/json-parser': 'json-parser',
   '/tools/burner-email': 'burner-email',
   '/tools': 'tools-collection',
+  '/about': 'about',
+  '/contact': 'contact',
 }
 
 const viewToPath: Partial<Record<View, string>> = {
   'json-parser': '/tools/json-parser',
   'burner-email': '/tools/burner-email',
   'tools-collection': '/tools',
+  'about': '/about',
+  'contact': '/contact',
   'home': '/',
 }
 
@@ -173,9 +179,33 @@ function AppRoutes() {
     <BurnerEmailScreen onHome={() => navigate('home')} />
   )
 
+  if (view === 'about') return (
+    <AboutScreen
+      onHome={() => navigate('home')}
+      onLogin={featureFlags.auth ? () => navigate('login') : undefined}
+      onSignUp={featureFlags.auth ? () => navigate('register') : undefined}
+      onContact={() => navigate('contact')}
+      onToolsCollection={() => navigate('tools-collection')}
+    />
+  )
+
+  if (view === 'contact') return (
+    <ContactScreen
+      onHome={() => navigate('home')}
+      onLogin={featureFlags.auth ? () => navigate('login') : undefined}
+      onSignUp={featureFlags.auth ? () => navigate('register') : undefined}
+      onAbout={() => navigate('about')}
+      onToolsCollection={() => navigate('tools-collection')}
+    />
+  )
+
   if (view === 'tools-collection') return (
     <ToolsCollectionScreen
       onHome={() => navigate('home')}
+      onLogin={featureFlags.auth ? () => navigate('login') : undefined}
+      onSignUp={featureFlags.auth ? () => navigate('register') : undefined}
+      onAbout={() => navigate('about')}
+      onContact={() => navigate('contact')}
       onJsonParser={featureFlags.tools.jsonParser ? () => navigate('json-parser') : undefined}
       onBurnerEmail={featureFlags.tools.burnerEmail ? () => navigate('burner-email') : undefined}
     />
@@ -185,6 +215,8 @@ function AppRoutes() {
     <HomeScreen
       onLogin={featureFlags.auth ? () => navigate('login') : undefined}
       onSignUp={featureFlags.auth ? () => navigate('register') : undefined}
+      onAbout={() => navigate('about')}
+      onContact={() => navigate('contact')}
       onJsonParser={featureFlags.tools.jsonParser ? () => navigate('json-parser') : undefined}
       onBurnerEmail={featureFlags.tools.burnerEmail ? () => navigate('burner-email') : undefined}
       onToolsCollection={() => navigate('tools-collection')}
