@@ -90,6 +90,7 @@ interface ToolCollection {
 interface ToolHandlers {
   onJsonParser?: () => void
   onBurnerEmail?: () => void
+  onPasswordGenerator?: () => void
 }
 
 export function getToolCollections(handlers: ToolHandlers): ToolCollection[] {
@@ -146,6 +147,7 @@ export function getToolCollections(handlers: ToolHandlers): ToolCollection[] {
           title: 'Password Generator',
           description: 'Create strong, random passwords with customizable length, character sets, and entropy display.',
           accentColor: 'var(--color-accent-green)',
+          onClick: handlers.onPasswordGenerator,
           comingSoon: !featureFlags.tools.passwordGenerator,
         },
       ],

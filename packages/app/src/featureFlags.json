@@ -5,7 +5,7 @@
     "diffChecker": false,
     "encoderDecoder": false,
     "burnerEmail": false,
-    "passwordGenerator": false,
+    "passwordGenerator": true,
     "regexTester": false,
     "imageOptimizer": false
   }

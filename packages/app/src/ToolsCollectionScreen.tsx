@@ -13,10 +13,11 @@ interface ToolsCollectionScreenProps {
   onContact?: () => void
   onJsonParser?: () => void
   onBurnerEmail?: () => void
+  onPasswordGenerator?: () => void
 }
 
-export default function ToolsCollectionScreen({ onHome, onLogin, onSignUp, onAbout, onContact, onJsonParser, onBurnerEmail }: ToolsCollectionScreenProps): React.ReactElement {
-  const collections = getToolCollections({ onJsonParser, onBurnerEmail })
+export default function ToolsCollectionScreen({ onHome, onLogin, onSignUp, onAbout, onContact, onJsonParser, onBurnerEmail, onPasswordGenerator }: ToolsCollectionScreenProps): React.ReactElement {
+  const collections = getToolCollections({ onJsonParser, onBurnerEmail, onPasswordGenerator })
 
   return (
     <NoirBackground>

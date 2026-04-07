@@ -13,11 +13,12 @@ interface HomeScreenProps {
   onContact?: () => void
   onJsonParser?: () => void
   onBurnerEmail?: () => void
+  onPasswordGenerator?: () => void
   onToolsCollection?: () => void
 }
 
-export default function HomeScreen({ onLogin, onSignUp, onAbout, onContact, onJsonParser, onBurnerEmail, onToolsCollection }: HomeScreenProps): React.ReactElement {
-  const collections = getToolCollections({ onJsonParser, onBurnerEmail })
+export default function HomeScreen({ onLogin, onSignUp, onAbout, onContact, onJsonParser, onBurnerEmail, onPasswordGenerator, onToolsCollection }: HomeScreenProps): React.ReactElement {
+  const collections = getToolCollections({ onJsonParser, onBurnerEmail, onPasswordGenerator })
 
   return (
     <NoirBackground>
