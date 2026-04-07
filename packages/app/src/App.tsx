@@ -13,15 +13,17 @@ import HomeScreen from './HomeScreen'
 import ToolsCollectionScreen from './ToolsCollectionScreen'
 import JsonParserScreen from './tools/JsonParserScreen'
 import BurnerEmailScreen from './tools/BurnerEmailScreen'
+import PasswordGeneratorScreen from './tools/PasswordGeneratorScreen'
 import AboutScreen from './AboutScreen'
 import ContactScreen from './ContactScreen'
 import featureFlags from './featureFlags'
 
-type View = 'home' | 'login' | 'register' | 'dashboard' | 'set-password' | 'forgot-password' | 'reset-password' | 'json-parser' | 'burner-email' | 'tools-collection' | 'about' | 'contact'
+type View = 'home' | 'login' | 'register' | 'dashboard' | 'set-password' | 'forgot-password' | 'reset-password' | 'json-parser' | 'burner-email' | 'password-generator' | 'tools-collection' | 'about' | 'contact'
 
 const pathToView: Record<string, View> = {
   '/tools/json-parser': 'json-parser',
   '/tools/burner-email': 'burner-email',
+  '/tools/password-generator': 'password-generator',
   '/tools': 'tools-collection',
   '/about': 'about',
   '/contact': 'contact',
@@ -30,6 +32,7 @@ const pathToView: Record<string, View> = {
 const viewToPath: Partial<Record<View, string>> = {
   'json-parser': '/tools/json-parser',
   'burner-email': '/tools/burner-email',
+  'password-generator': '/tools/password-generator',
   'tools-collection': '/tools',
   'about': '/about',
   'contact': '/contact',
@@ -96,7 +99,7 @@ function AppRoutes() {
       return
     }
 
-    if (view === 'json-parser' || view === 'burner-email') {
+    if (view === 'json-parser' || view === 'burner-email' || view === 'password-generator') {
       setIsCheckingAuth(false)
       return
     }
@@ -179,6 +182,10 @@ function AppRoutes() {
     <BurnerEmailScreen onHome={() => navigate('home')} />
   )
 
+  if (featureFlags.tools.passwordGenerator && view === 'password-generator') return (
+    <PasswordGeneratorScreen onHome={() => navigate('home')} />
+  )
+
   if (view === 'about') return (
     <AboutScreen
       onHome={() => navigate('home')}
@@ -208,6 +215,7 @@ function AppRoutes() {
       onContact={() => navigate('contact')}
       onJsonParser={featureFlags.tools.jsonParser ? () => navigate('json-parser') : undefined}
       onBurnerEmail={featureFlags.tools.burnerEmail ? () => navigate('burner-email') : undefined}
+      onPasswordGenerator={featureFlags.tools.passwordGenerator ? () => navigate('password-generator') : undefined}
     />
   )
 
@@ -219,6 +227,7 @@ function AppRoutes() {
       onContact={() => navigate('contact')}
       onJsonParser={featureFlags.tools.jsonParser ? () => navigate('json-parser') : undefined}
       onBurnerEmail={featureFlags.tools.burnerEmail ? () => navigate('burner-email') : undefined}
+      onPasswordGenerator={featureFlags.tools.passwordGenerator ? () => navigate('password-generator') : undefined}
       onToolsCollection={() => navigate('tools-collection')}
     />
   )
